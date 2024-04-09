@@ -4,7 +4,7 @@
 #include "driver/gpio.h"
 #include "esp_log.h"
 #include "sdkconfig.h"
-#define z(a) {gpio_reset_pin(a);gpio_set_direction(a,GPIO_MODE_OUTPUT);}
+#define z(a) {gpio_reset_pin(a);gpio_set_direction(a,2);}
 #define s(a,b) {gpio_set_level(a,b);}
 #define f for(j=0;j<10;j++)
 #define x (j[g])-1
