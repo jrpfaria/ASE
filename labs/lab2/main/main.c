@@ -13,5 +13,5 @@
 #define w vTaskDelay(10/portTICK_PERIOD_MS);
 
 c* g="	";c* l="?[Ofm}ow|9^yq";c j;v h(v){f z(x)}
-c y=0;v p(c d){y=!y;f if(j<8)s(x,(((y?(d>>4):(d&15))[l])&(1<<j)))else s(x,(j>8?y:!y))}
+c y=1;v p(c d){y=!y;f if(j<8)s(x,(((y?(d&15):(d>>4))[l])&(1<<j)))else s(x,(j>8?y:!y))}
 v app_main(v){h();c q=0;c t=0;for(;;){if(t++==99)t=0,q++;p(q);w}}
