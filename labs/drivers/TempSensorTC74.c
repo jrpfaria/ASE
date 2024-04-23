@@ -2,12 +2,10 @@
 
 // ESP Macros
 #define check(x) esp_err_t ret = ESP_ERROR_CHECK_WITHOUT_ABORT(x); if(ret != ESP_OK) return ret;
-#define bool_check(x) return (ESP_ERROR_CHECK_WITHOUT_ABORT(x) == ESP_OK) ? true : false;
 #define ok return ESP_OK;
 #define tx i2c_master_transmit
 #define rx i2c_master_receive
 #define txrx i2c_master_transmit_receive
-#define delay vTaskDelay(10 / portTICK_PERIOD_MS)
 
 esp_err_t tc74_init(i2c_master_bus_handle_t* pBusHandle,
 					i2c_master_dev_handle_t* pSensorHandle,
@@ -46,7 +44,7 @@ esp_err_t tc74_free(i2c_master_bus_handle_t busHandle,
 
 esp_err_t tc74_standy(i2c_master_dev_handle_t sensorHandle)
 {
-    const uint8_t txBuf[2] = {0x01, 0x01};
+    const uint8_t txBuf[2] = {0x01, 0x80};
     
     check( tx (sensorHandle, txBuf, sizeof(txBuf), -1))
 
@@ -64,18 +62,19 @@ esp_err_t tc74_wakeup(i2c_master_dev_handle_t sensorHandle)
 
 bool tc74_is_temperature_ready(i2c_master_dev_handle_t sensorHandle)
 {
-    const uint8_t rxBuf = 0x00;
-
-    bool_check( rx (sensorHandle, &rxBuf, sizeof(rxBuf), -1))    
+    const uint8_t txBuf = 0x01;
+    uint8_t rxBuf;
+    
+    check( txrx (sensorHandle, &txBuf, sizeof(txBuf), &rxBuf, sizeof(rxBuf), -1))
+    
+    return (rxBuf & 0x40);    
 }
 
 esp_err_t tc74_wakeup_and_read_temp(i2c_master_dev_handle_t sensorHandle, uint8_t* pTemp)
 {
     check(tc74_wakeup(sensorHandle))
 
-    while(!tc74_is_temperature_ready(sensorHandle)) delay;
-
-    tc74_read_temp_after_cfg(sensorHandle, pTemp);
+    check(tc74_read_temp_after_cfg(sensorHandle, pTemp))
 
     ok
 }
