@@ -13,7 +13,7 @@ esp_err_t tc74_init(i2c_master_bus_handle_t* pBusHandle,
 /**
  * \brief Frees master bus and device handle for TC74 sensor. 
  */
-esp_err_t tc_74_free(i2c_master_bus_handle_t busHandle,
+esp_err_t tc74_free(i2c_master_bus_handle_t busHandle,
 					 i2c_master_dev_handle_t sensorHandle);
 
 /**
