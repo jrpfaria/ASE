@@ -46,25 +46,25 @@ esp_err_t tc74_free(i2c_master_bus_handle_t busHandle,
 
 esp_err_t tc74_standy(i2c_master_dev_handle_t sensorHandle)
 {
-    static uint8_t txBuf[2] = {0x01, 0x01};
+    const uint8_t txBuf[2] = {0x01, 0x01};
     
-    check( tx (sensorHandle, &txBuf, sizeof(txBuf), -1))
+    check( tx (sensorHandle, txBuf, sizeof(txBuf), -1))
 
     ok
 }
 
 esp_err_t tc74_wakeup(i2c_master_dev_handle_t sensorHandle)
 {
-    static uint8_t txBuf[2] = {0x01, 0x00};
+    const uint8_t txBuf[2] = {0x01, 0x00};
 
-    check( tx (sensorHandle, &txBuf, sizeof(txBuf), -1))
+    check( tx (sensorHandle, txBuf, sizeof(txBuf), -1))
 
     ok
 }
 
 bool tc74_is_temperature_ready(i2c_master_dev_handle_t sensorHandle)
 {
-    static uint8_t rxBuf = 0x00;
+    const uint8_t rxBuf = 0x00;
 
     bool_check( rx (sensorHandle, &rxBuf, sizeof(rxBuf), -1))    
 }
@@ -82,7 +82,7 @@ esp_err_t tc74_wakeup_and_read_temp(i2c_master_dev_handle_t sensorHandle, uint8_
 
 esp_err_t tc74_read_temp_after_cfg(i2c_master_dev_handle_t sensorHandle, uint8_t* pTemp)
 {
-    static uint8_t txBuf = 0x00;
+    const uint8_t txBuf = 0x00;
     check( txrx (sensorHandle, &txBuf, sizeof(txBuf), pTemp, sizeof(pTemp), -1))
 
     ok

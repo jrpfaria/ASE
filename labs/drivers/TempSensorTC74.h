@@ -1,7 +1,7 @@
 #ifndef __TEMP_SENSOR_TC74_H__INCLUDED__
 #define __TEMP_SENSOR_TC74_H__INCLUDED__
 
-#include "driver/i2c-master.h"
+#include "driver/i2c_master.h"
 
 esp_err_t tc74_init(i2c_master_bus_handle_t* pBusHandle,
 					i2c_master_dev_handle_t* pSensorHandle,
