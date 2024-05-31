@@ -45,7 +45,7 @@ esp_err_t bme280_free(i2c_master_bus_handle_t busHandle,
 esp_err_t bme280_set_mode(i2c_master_dev_handle_t sensorHandle, uint8_t mode)
 {
     uint8_t txBuf[2] = {CTRL_MEAS_REG, mode};
-    err = ESP_ERROR_CHECK_WITHOUT_ABORT(i2c_master_transmit(sensorHandle, txBuf, 2));
+    err = ESP_ERROR_CHECK_WITHOUT_ABORT(i2c_master_transmit(sensorHandle, txBuf, 2, -1));
     if (err != ESP_OK) return err;
 
     return ESP_OK;
@@ -75,13 +75,32 @@ esp_err_t bme280_read_humidity(i2c_master_dev_handle_t sensorHandle, uint16_t* h
 {
     uint8_t rxBuf[2];
     uint8_t txBuf[1] = {HUM_MSB_REG};
-    err = ESP_ERROR_CHECK_WITHOUT_ABORT(i2c_master_transmit(sensorHandle, txBuf, 1));
-    if (err != ESP_OK) return err;
-
-    err = ESP_ERROR_CHECK_WITHOUT_ABORT(i2c_master_receive(sensorHandle, rxBuf, 2));
+    err = ESP_ERROR_CHECK_WITHOUT_ABORT(i2c_master_transmit_receive(sensorHandle, txBuf, 1, rxBuf, 2, -1));
     if (err != ESP_OK) return err;
 
     *humidity = (rxBuf[0] << 8) | rxBuf[1];
+    return ESP_OK;
+}
+
+esp_err_t bme280_read_humidity_lsb(i2c_master_dev_handle_t sensorHandle, uint8_t* humidity)
+{
+    uint8_t rxBuf[1];
+    uint8_t txBuf[1] = {HUM_LSB_REG};
+    err = ESP_ERROR_CHECK_WITHOUT_ABORT(i2c_master_transmit_receive(sensorHandle, txBuf, 1, rxBuf, 1, -1));
+    if (err != ESP_OK) return err;
+
+    *humidity = rxBuf[0];
+    return ESP_OK;
+}
+
+esp_err_t bme280_read_humidity_msb(i2c_master_dev_handle_t sensorHandle, uint8_t* humidity)
+{
+    uint8_t rxBuf[1];
+    uint8_t txBuf[1] = {HUM_MSB_REG};
+    err = ESP_ERROR_CHECK_WITHOUT_ABORT(i2c_master_transmit_receive(sensorHandle, txBuf, 1, rxBuf, 1, -1));
+    if (err != ESP_OK) return err;
+
+    *humidity = rxBuf[0];
     return ESP_OK;
 }
 
@@ -90,10 +109,10 @@ esp_err_t bme280_read_temperature(i2c_master_dev_handle_t sensorHandle, uint32_t
 {
     uint8_t rxBuf[3];
     uint8_t txBuf[1] = {TEMP_MSB_REG};
-    err = ESP_ERROR_CHECK_WITHOUT_ABORT(i2c_master_transmit(sensorHandle, txBuf, 1));
+    err = ESP_ERROR_CHECK_WITHOUT_ABORT(i2c_master_transmit(sensorHandle, txBuf, 1, -1));
     if (err != ESP_OK) return err;
 
-    err = ESP_ERROR_CHECK_WITHOUT_ABORT(i2c_master_receive(sensorHandle, rxBuf, 3));
+    err = ESP_ERROR_CHECK_WITHOUT_ABORT(i2c_master_receive(sensorHandle, rxBuf, 3, -1));
     if (err != ESP_OK) return err;
 
     *temperature = (rxBuf[0] << 12) | (rxBuf[1] << 4) | (rxBuf[2] >> 4);
