@@ -113,4 +113,8 @@ esp_err_t bme280_set_pressure_oversampling(i2c_master_dev_handle_t sensorHandle,
  *       - [5] OVERSAMPLE_16X
  */
 esp_err_t bme280_set_humidity_oversampling(i2c_master_dev_handle_t sensorHandle, uint8_t oversampling);
+
+esp_err_t bme280_read_humidity_msb(i2c_master_dev_handle_t sensorHandle, uint8_t* humidity);
+esp_err_t bme280_read_humidity_lsb(i2c_master_dev_handle_t sensorHandle, uint8_t* humidity);
+
 #endif // __TEMP_SENSOR_BME280_H__INCLUDED__
