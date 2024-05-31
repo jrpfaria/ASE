@@ -1,3 +1,6 @@
+#ifndef __TEMP_SENSOR_TC74_H__INCLUDED__
+#define __TEMP_SENSOR_TC74_H__INCLUDED__
+
 #include "driver/i2c.h"
 #include "driver/i2c_master.h"
 

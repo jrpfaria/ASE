@@ -26,8 +26,10 @@ esp_err_t bme280_init(i2c_master_bus_handle_t* pBusHandle,
         .scl_speed_hz = clkSpeedHz,
     };
 
-    err = ESP_ERROR_CHECK_WITHOUT_ABORT(i2c_new_device(*pBusHandle, &i2cDevCfg, pSensorHandle));
+    err = ESP_ERROR_CHECK_WITHOUT_ABORT(i2c_master_bus_add_device(*pBusHandle, &i2cDevCfg, pSensorHandle));
     if (err != ESP_OK) return err;
+
+    return ESP_OK;
 }
 
 // Frees master bus and device handle for BME280 sensor
@@ -36,9 +38,11 @@ esp_err_t bme280_free(i2c_master_bus_handle_t busHandle,
 {
     err = ESP_ERROR_CHECK_WITHOUT_ABORT(i2c_del_master_bus(busHandle));
     if (err != ESP_OK) return err;
-    
-    err = ESP_ERROR_CHECK_WITHOUT_ABORT(i2c_del_device(sensorHandle));
+
+    err = ESP_ERROR_CHECK_WITHOUT_ABORT(i2c_master_bus_rm_device(sensorHandle));
     if (err != ESP_OK) return err;
+
+    return ESP_OK;
 }
 
 // Set the mode of the BME280 sensor
@@ -124,10 +128,10 @@ esp_err_t bme280_read_pressure(i2c_master_dev_handle_t sensorHandle, uint32_t* p
 {
     uint8_t rxBuf[3];
     uint8_t txBuf[1] = {PRESS_MSB_REG};
-    err = ESP_ERROR_CHECK_WITHOUT_ABORT(i2c_master_transmit(sensorHandle, txBuf, 1));
+    err = ESP_ERROR_CHECK_WITHOUT_ABORT(i2c_master_transmit(sensorHandle, txBuf, 1, -1));
     if (err != ESP_OK) return err;
 
-    err = ESP_ERROR_CHECK_WITHOUT_ABORT(i2c_master_receive(sensorHandle, rxBuf, 3));
+    err = ESP_ERROR_CHECK_WITHOUT_ABORT(i2c_master_receive(sensorHandle, rxBuf, 3, -1));
     if (err != ESP_OK) return err;
 
     *pressure = (rxBuf[0] << 12) | (rxBuf[1] << 4) | (rxBuf[2] >> 4);
@@ -153,7 +157,7 @@ esp_err_t bme280_read_data(i2c_master_dev_handle_t sensorHandle, bme280_data_t* 
 esp_err_t bme280_set_temperature_oversampling(i2c_master_dev_handle_t sensorHandle, uint8_t oversampling)
 {
     uint8_t txBuf[2] = {CTRL_MEAS_REG, oversampling << 5};
-    err = ESP_ERROR_CHECK_WITHOUT_ABORT(i2c_master_transmit(sensorHandle, txBuf, 2));
+    err = ESP_ERROR_CHECK_WITHOUT_ABORT(i2c_master_transmit(sensorHandle, txBuf, 2, -1));
     if (err != ESP_OK) return err;
 
     return ESP_OK;
@@ -162,7 +166,7 @@ esp_err_t bme280_set_temperature_oversampling(i2c_master_dev_handle_t sensorHand
 esp_err_t bme280_set_pressure_oversampling(i2c_master_dev_handle_t sensorHandle, uint8_t oversampling)
 {
     uint8_t txBuf[2] = {CTRL_MEAS_REG, oversampling << 2};
-    err = ESP_ERROR_CHECK_WITHOUT_ABORT(i2c_master_transmit(sensorHandle, txBuf, 2));
+    err = ESP_ERROR_CHECK_WITHOUT_ABORT(i2c_master_transmit(sensorHandle, txBuf, 2, -1));
     if (err != ESP_OK) return err;
 
     return ESP_OK;
@@ -171,7 +175,7 @@ esp_err_t bme280_set_pressure_oversampling(i2c_master_dev_handle_t sensorHandle,
 esp_err_t bme280_set_humidity_oversampling(i2c_master_dev_handle_t sensorHandle, uint8_t oversampling)
 {
     uint8_t txBuf[2] = {CTRL_HUM_REG, oversampling};
-    err = ESP_ERROR_CHECK_WITHOUT_ABORT(i2c_master_transmit(sensorHandle, txBuf, 2));
+    err = ESP_ERROR_CHECK_WITHOUT_ABORT(i2c_master_transmit(sensorHandle, txBuf, 2, -1));
     if (err != ESP_OK) return err;
 
     return ESP_OK;
