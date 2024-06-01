@@ -1,15 +1,28 @@
 #include "bme280.h"
-#include "bme280_macros.h"
 
 // ESP Macros
 #define CHECK(x) do { esp_err_t err; if ((err = ESP_ERROR_CHECK_WITHOUT_ABORT(x)) != ESP_OK) return err; } while (0)
 
 // Global Variables
-bme280_calib_data_t calibData;
-bme280_config_t config;
+/**
+ * \brief Calibration data for the BME280 sensor.
+ */
+static bme280_calib_data_t calibData;
+
+/**
+ * \brief Configuration data for the BME280 sensor.
+ */
+static bme280_config_t config;
+
+/**
+ * \brief Raw data from the BME280 sensor.
+ */
+static bme280_data_t rawData;
 
 
-// Configures master bus and device handle for BME280 sensor
+/**
+ * \brief Configures master bus and device handle for BME280 sensor.
+ */
 esp_err_t bme280_init(i2c_master_bus_handle_t* pBusHandle,
                                         i2c_master_dev_handle_t* pSensorHandle,
                                         uint8_t sensorAddr, int sdaPin, int sclPin, uint32_t clkSpeedHz)
@@ -36,7 +49,9 @@ esp_err_t bme280_init(i2c_master_bus_handle_t* pBusHandle,
     return ESP_OK;
 }
 
-// Frees master bus and device handle for BME280 sensor
+/**
+ * \brief Frees master bus and device handle for BME280 sensor.
+ */
 esp_err_t bme280_free(i2c_master_bus_handle_t busHandle,
                                          i2c_master_dev_handle_t sensorHandle)
 {
@@ -98,7 +113,14 @@ esp_err_t bme280_set_mode(i2c_master_dev_handle_t sensorHandle, uint8_t mode)
 }
 
 /**
- * \brief Sets the oversampling rate for the BME280 sensor. 
+ * \brief Sets the temperature oversampling rate for the BME280 sensor. 
+ *      The oversampling rate can be one of the following:
+ *         - [0] OVERSAMPLING_SKIP (output set to 0x80000)
+ *         - [1] OVERSAMPLING_1X
+ *         - [2] OVERSAMPLING_2X
+ *         - [3] OVERSAMPLING_4X
+ *         - [4] OVERSAMPLING_8X
+ *         - [5] OVERSAMPLING_16X
  */
 esp_err_t bme280_set_temperature_oversampling(i2c_master_dev_handle_t sensorHandle, uint8_t osrs_t)
 {
@@ -113,7 +135,14 @@ esp_err_t bme280_set_temperature_oversampling(i2c_master_dev_handle_t sensorHand
 }
 
 /**
- * \brief Sets the oversampling rate for the BME280 sensor. 
+ * \brief Sets the pressure oversampling rate for the BME280 sensor. 
+ *      The oversampling rate can be one of the following:
+ *         - [0] OVERSAMPLING_SKIP (output set to 0x80000)
+ *         - [1] OVERSAMPLING_1X
+ *         - [2] OVERSAMPLING_2X
+ *         - [3] OVERSAMPLING_4X
+ *         - [4] OVERSAMPLING_8X
+ *         - [5] OVERSAMPLING_16X
  */
 esp_err_t bme280_set_pressure_oversampling(i2c_master_dev_handle_t sensorHandle, uint8_t osrs_p)
 {
@@ -129,7 +158,14 @@ esp_err_t bme280_set_pressure_oversampling(i2c_master_dev_handle_t sensorHandle,
 
 
 /**
- * \brief Sets the humidity oversampling rate for the BME280 sensor.  
+ * \brief Sets the humidity oversampling rate for the BME280 sensor.
+ *      The humidity oversampling rate can be one of the following:
+ *         - [0] OVERSAMPLING_SKIP (output set to 0x80000)
+ *         - [1] OVERSAMPLING_1X
+ *         - [2] OVERSAMPLING_2X
+ *         - [3] OVERSAMPLING_4X
+ *         - [4] OVERSAMPLING_8X
+ *         - [5] OVERSAMPLING_16X  
  */
 esp_err_t bme280_set_humidity_oversampling(i2c_master_dev_handle_t sensorHandle, uint8_t osrs_h)
 {
@@ -151,7 +187,14 @@ esp_err_t bme280_set_humidity_oversampling(i2c_master_dev_handle_t sensorHandle,
 }
 
 /**
- * \brief Sets the standby time for the BME280 sensor.   
+ * \brief Sets the standby time for the BME280 sensor.  
+ *      The standby time can be one of the following:
+ *         - [0] STANDBY_0_5MS
+ *         - [1] STANDBY_62_5MS
+ *         - [2] STANDBY_125MS
+ *         - [3] STANDBY_250MS
+ *         - [4] STANDBY_500MS
+ *         - [5] STANDBY_1000MS 
  */
 esp_err_t bme280_set_standby_time(i2c_master_dev_handle_t sensorHandle, uint8_t t_sb)
 {
@@ -164,7 +207,7 @@ esp_err_t bme280_set_standby_time(i2c_master_dev_handle_t sensorHandle, uint8_t 
     CHECK(i2c_master_transmit_receive(sensorHandle, txBuf, sizeof(txBuf), rxBuf, sizeof(rxBuf), -1));
 
     // Update the config register with the new value
-    uint8_t new_config_reg = (rxBuf[0] & 0xE7) | (config.t_sb & 0x7) << 5 | (config.filter & 0x7) << 2 | (config.spi3w_en & 0x1);
+    uint8_t new_config_reg = (rxBuf[0] & 0x2) | (config.t_sb & 0x7) << 5 | (config.filter & 0x7) << 2 | (config.spi3w_en & 0x1);
     uint8_t txBuf2[2] = {CONFIG_REG, new_config_reg};
 
     CHECK(i2c_master_transmit(sensorHandle, txBuf2, sizeof(txBuf2), -1));
@@ -173,7 +216,13 @@ esp_err_t bme280_set_standby_time(i2c_master_dev_handle_t sensorHandle, uint8_t 
 }
 
 /**
- * \brief Sets the filter coefficient for the BME280 sensor.   
+ * \brief Sets the filter coefficient for the BME280 sensor.
+ *      The filter coefficient can be one of the following:
+ *         - [0] FILTER_OFF
+ *         - [1] FILTER_2
+ *         - [2] FILTER_4
+ *         - [3] FILTER_8
+ *         - [4] FILTER_16   
  */
 esp_err_t bme280_set_filter(i2c_master_dev_handle_t sensorHandle, uint8_t filter)
 {
@@ -186,7 +235,7 @@ esp_err_t bme280_set_filter(i2c_master_dev_handle_t sensorHandle, uint8_t filter
     CHECK(i2c_master_transmit_receive(sensorHandle, txBuf, sizeof(txBuf), rxBuf, sizeof(rxBuf), -1));
 
     // Update the config register with the new value
-    uint8_t new_config_reg = (rxBuf[0] & 0xE7) | (config.t_sb & 0x7) << 5 | (config.filter & 0x7) << 2 | (config.spi3w_en & 0x1);
+    uint8_t new_config_reg = (rxBuf[0] & 0x2) | (config.t_sb & 0x7) << 5 | (config.filter & 0x7) << 2 | (config.spi3w_en & 0x1);
     uint8_t txBuf2[2] = {CONFIG_REG, new_config_reg};
 
     CHECK(i2c_master_transmit(sensorHandle, txBuf2, sizeof(txBuf2), -1));
@@ -196,6 +245,9 @@ esp_err_t bme280_set_filter(i2c_master_dev_handle_t sensorHandle, uint8_t filter
 
 /**
  * \brief Sets the SPI 3-wire enable for the BME280 sensor.
+ *      The SPI 3-wire enable can be one of the following:
+ *         - [0] SPI3W_DISABLE
+ *         - [1] SPI3W_ENABLE
  */
 esp_err_t bme280_set_spi3w_en(i2c_master_dev_handle_t sensorHandle, uint8_t spi3w_en)
 {
@@ -208,7 +260,7 @@ esp_err_t bme280_set_spi3w_en(i2c_master_dev_handle_t sensorHandle, uint8_t spi3
     CHECK(i2c_master_transmit_receive(sensorHandle, txBuf, sizeof(txBuf), rxBuf, sizeof(rxBuf), -1));
 
     // Update the config register with the new value
-    uint8_t new_config_reg = (rxBuf[0] & 0xE7) | (config.t_sb & 0x7) << 5 | (config.filter & 0x7) << 2 | (config.spi3w_en & 0x1);
+    uint8_t new_config_reg = (rxBuf[0] & 0x2) | ((config.t_sb & 0x7) << 5 | (config.filter & 0x7) << 2 | (config.spi3w_en & 0x1));
     uint8_t txBuf2[2] = {CONFIG_REG, new_config_reg};
 
     CHECK(i2c_master_transmit(sensorHandle, txBuf2, sizeof(txBuf2), -1));
@@ -218,24 +270,40 @@ esp_err_t bme280_set_spi3w_en(i2c_master_dev_handle_t sensorHandle, uint8_t spi3
 
 /**
  * \brief Default setup for the BME280 sensor.
- *     The default setup is as follows:
- *        - Temperature oversampling: 1x
- *       - Pressure oversampling: 1x
- *      - Humidity oversampling: 1x
- *     - Filter coefficient: off
+ *      The default setup is as follows:
+ *         - Temperature oversampling: 1x
+ *         - Pressure oversampling: 1x
+ *         - Humidity oversampling: 1x
+ *         - Filter coefficient: off
  */
 esp_err_t bme280_default_setup(i2c_master_dev_handle_t sensorHandle)
 {
+    // ctrl_meas register
     config.osrs_t = OVERSAMPLE_1X;
     config.osrs_p = OVERSAMPLE_1X;
-    config.osrs_h = OVERSAMPLE_1X;
+    config.mode = MODE_SLEEP;
+
+    const uint8_t txBuf[2] = {CTRL_MEAS_REG, (OVERSAMPLE_1X & 0x7) << 5 | (OVERSAMPLE_1X & 0x7) << 2 | (MODE_SLEEP & 0x3)};
+    CHECK(i2c_master_transmit(sensorHandle, txBuf, sizeof(txBuf), -1));
+
+    // config register
     config.t_sb = STANDBY_0_5MS;
     config.filter = FILTER_OFF;
     config.spi3w_en = SPI3W_OFF;
-    config.mode = MODE_SLEEP;
 
-    // TO-DO: Implement the rest of this function
-    // Best to minimize the use of set functions as we can do just write to the registers directly here
+    const uint8_t txBuf1[1] = {CONFIG_REG};
+    uint8_t rxBuf[1];
+
+    CHECK(i2c_master_transmit_receive(sensorHandle, txBuf1, sizeof(txBuf1), rxBuf, sizeof(rxBuf), -1));
+
+    uint8_t new_config_reg = (rxBuf[0] & 0x2) | (STANDBY_0_5MS & 0x7) << 5 | (FILTER_OFF & 0x7) << 2 | (SPI3W_OFF & 0x1);
+
+    uint8_t txBuf2[2] = {CONFIG_REG, new_config_reg};
+
+    CHECK(i2c_master_transmit(sensorHandle, txBuf2, sizeof(txBuf2), -1));
+
+    // ctrl_hum register
+    CHECK(bme280_set_humidity_oversampling(sensorHandle, OVERSAMPLE_1X));
 
     return ESP_OK;
 }
@@ -281,10 +349,18 @@ esp_err_t bme280_read_calibration_data(i2c_master_dev_handle_t sensorHandle)
 /**
  * \brief Temperature compensation for the BME280 sensor. 
  */
+double t_fine;
 double bme280_compensate_temperature(int32_t adc_T)
 {
+    int32_t var1, var2;
 
-    return (double)0;
+    var1 = (((double)adc_T)/16384.0 - ((double)calibData.dig_T1)/1024.0) * ((double)calibData.dig_T2);
+    var2 = ((((double)adc_T)/131072.0 - ((double)calibData.dig_T1)/8192.0) *
+        (((double)adc_T)/131072.0 - ((double)calibData.dig_T1)/8192.0)) * ((double)calibData.dig_T3);
+
+    t_fine = var1 + var2;
+
+    return (var1 + var2) / 5120.0;
 }
 
 /**
@@ -292,8 +368,25 @@ double bme280_compensate_temperature(int32_t adc_T)
  */
 double bme280_compensate_pressure(int32_t adc_P)
 {
+    double var1, var2, p;
 
-    return (double)0;
+    var1 = ((double)t_fine/2.0) - 64000.0;
+    var2 = var1 * var1 * ((double)calibData.dig_P6) / 32768.0;
+    var2 = var2 + var1 * ((double)calibData.dig_P5) * 2.0;
+    var2 = (var2/4.0)+(((double)calibData.dig_P4) * 65536.0);
+    var1 = (((double)calibData.dig_P3) * var1 * var1 / 524288.0 + 
+        ((double)calibData.dig_P2) * var1) / 524288.0;
+    var1 = (1.0 + var1 / 32768.0) * ((double)calibData.dig_P1);
+    if (var1 == 0.0)
+    {
+        return 0; // avoid exception caused by division by zero
+    }
+    p = 1048576.0 - (double)adc_P;
+    p = (p - (var2 / 4096.0)) * 6250.0 / var1;
+    var1 = ((double)calibData.dig_P9) * p * p / 2147483648.0;
+    var2 = p * ((double)calibData.dig_P8) / 32768.0;
+    p = p + (var1 + var2 + ((double)calibData.dig_P7)) / 16.0;
+    return p;
 }
 
 /**
@@ -301,19 +394,28 @@ double bme280_compensate_pressure(int32_t adc_P)
  */
 double bme280_compensate_humidity(int32_t adc_H)
 {
+    double var_H;
 
-    return (double)0;
+    var_H = (t_fine - 76800.0);
+    var_H = (adc_H - (((double)calibData.dig_H4) * 64.0 + ((double)calibData.dig_H5) / 16384.0 * var_H)) *
+        (((double)calibData.dig_H2) / 65536.0 * (1.0 + ((double)calibData.dig_H6) / 67108864.0 * var_H *
+        (1.0 + ((double)calibData.dig_H3) / 67108864.0 * var_H)));
+    var_H = var_H * (1.0 - ((double)calibData.dig_H1) * var_H / 524288.0);
+    if (var_H > 100.0)
+        var_H = 100.0;
+    else if (var_H < 0.0)
+        var_H = 0.0;
+    return var_H;
 }
-
 
 /**
  * \brief Data compensation for the BME280 sensor.
  */
-void bme280_compensate_data(bme280_data_t* rawData, bme280_comp_data_t* data)
+void bme280_compensate_data(bme280_comp_data_t* data)
 {
-    data->temperature = bme280_compensate_temperature(rawData->temperature);
-    data->pressure = bme280_compensate_pressure(rawData->pressure);
-    data->humidity = bme280_compensate_humidity(rawData->humidity);
+    data->temperature = bme280_compensate_temperature(rawData.temperature);
+    data->pressure = bme280_compensate_pressure(rawData.pressure);
+    data->humidity = bme280_compensate_humidity(rawData.humidity);
 }
 
 /**
@@ -326,15 +428,11 @@ esp_err_t bme280_read_data(i2c_master_dev_handle_t sensorHandle, bme280_comp_dat
 
     CHECK(i2c_master_transmit_receive(sensorHandle, txBuf, sizeof(txBuf), rxBuf, sizeof(rxBuf), -1));
 
-    bme280_data_t* rawData = (bme280_data_t*) malloc(sizeof(bme280_data_t));
+    rawData.pressure = (rxBuf[0] << 12) | (rxBuf[1] << 4) | (rxBuf[2] >> 4);
+    rawData.temperature = (rxBuf[3] << 12) | (rxBuf[4] << 4) | (rxBuf[5] >> 4);
+    rawData.humidity = (rxBuf[6] << 8) | rxBuf[7];
 
-    rawData->pressure = (rxBuf[0] << 12) | (rxBuf[1] << 4) | (rxBuf[2] >> 4);
-    rawData->temperature = (rxBuf[3] << 12) | (rxBuf[4] << 4) | (rxBuf[5] >> 4);
-    rawData->humidity = (rxBuf[6] << 8) | rxBuf[7];
-
-    bme280_compensate_data(rawData, data);
-
-    free(rawData);
+    bme280_compensate_data(data);
 
     return ESP_OK;
 }
