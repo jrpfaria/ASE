@@ -60,36 +60,66 @@ esp_err_t bme280_set_mode(i2c_master_dev_handle_t sensorHandle, bme280_config_t*
 
 /**
  * \brief Sets the oversampling rate for the BME280 sensor. 
+ *      The oversampling rate can be one of the following:
+ *         - [0] OVERSAMPLING_SKIP (output set to 0x80000)
+ *         - [1] OVERSAMPLING_1X
+ *         - [2] OVERSAMPLING_2X
+ *         - [3] OVERSAMPLING_4X
+ *         - [4] OVERSAMPLING_8X
+ *         - [5] OVERSAMPLING_16X
  */
 esp_err_t bme280_set_tp_oversampling(i2c_master_dev_handle_t sensorHandle, bme280_config_t* config);
 
 /**
- * \brief Sets the humidity oversampling rate for the BME280 sensor.  
+ * \brief Sets the humidity oversampling rate for the BME280 sensor.
+ *      The humidity oversampling rate can be one of the following:
+ *         - [0] OVERSAMPLING_SKIP (output set to 0x80000)
+ *         - [1] OVERSAMPLING_1X
+ *         - [2] OVERSAMPLING_2X
+ *         - [3] OVERSAMPLING_4X
+ *         - [4] OVERSAMPLING_8X
+ *         - [5] OVERSAMPLING_16X  
  */
 esp_err_t bme280_set_h_oversampling(i2c_master_dev_handle_t sensorHandle, bme280_config_t* config);
 
 /**
- * \brief Sets the standby time for the BME280 sensor.   
+ * \brief Sets the standby time for the BME280 sensor.  
+ *      The standby time can be one of the following:
+ *         - [0] STANDBY_0_5MS
+ *         - [1] STANDBY_62_5MS
+ *         - [2] STANDBY_125MS
+ *         - [3] STANDBY_250MS
+ *         - [4] STANDBY_500MS
+ *         - [5] STANDBY_1000MS 
  */
 esp_err_t bme280_set_standby_time(i2c_master_dev_handle_t sensorHandle, bme280_config_t* config);
 
 /**
- * \brief Sets the filter coefficient for the BME280 sensor.   
+ * \brief Sets the filter coefficient for the BME280 sensor.
+ *      The filter coefficient can be one of the following:
+ *         - [0] FILTER_OFF
+ *         - [1] FILTER_2
+ *         - [2] FILTER_4
+ *         - [3] FILTER_8
+ *         - [4] FILTER_16   
  */
 esp_err_t bme280_set_filter(i2c_master_dev_handle_t sensorHandle, bme280_config_t* config);
 
 /**
  * \brief Sets the SPI 3-wire enable for the BME280 sensor.
+ *      The SPI 3-wire enable can be one of the following:
+ *         - [0] SPI3W_DISABLE
+ *         - [1] SPI3W_ENABLE
  */
 esp_err_t bme280_set_spi3w_en(i2c_master_dev_handle_t sensorHandle, bme280_config_t* config);
 
 /**
  * \brief Default setup for the BME280 sensor.
- *     The default setup is as follows:
- *        - Temperature oversampling: 1x
- *       - Pressure oversampling: 1x
- *      - Humidity oversampling: 1x
- *     - Filter coefficient: off
+ *      The default setup is as follows:
+ *         - Temperature oversampling: 1x
+ *         - Pressure oversampling: 1x
+ *         - Humidity oversampling: 1x
+ *         - Filter coefficient: off
  */
 esp_err_t bme280_default_setup(i2c_master_dev_handle_t sensorHandle, bme280_config_t* config);
 
