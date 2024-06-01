@@ -95,43 +95,37 @@ void display_b10(int value) {
 i2c_master_bus_handle_t busHandle;
 i2c_master_dev_handle_t sensorHandle;
 
-uint16_t temperature[1]; // Temperature value
-uint8_t humidity[1]; // Humidity value
-uint8_t pressure[1]; // Pressure value
+// uint16_t temperature[1]; // Temperature value
+// uint8_t humidity[1]; // Humidity value
+// uint8_t pressure[1]; // Pressure value
 short int timer = 0; // Timer value
 
 static void callback_sensor(void* arg) {
     // Read the temperature
-    bme280_set_mode_forced(sensorHandle);
-    bme280_read_humidity(sensorHandle, temperature);
-    bme280_set_mode_forced(sensorHandle);
-    bme280_read_humidity_lsb(sensorHandle, humidity);
-    bme280_set_mode_forced(sensorHandle);
-    bme280_read_humidity_msb(sensorHandle, pressure);
-    printf("\r %d ", humidity[0] | (pressure[0] << 8));
-    printf("%d", temperature[0]);
-    fflush(stdout);
+    // printf("\r %d ", humidity[0] | (pressure[0] << 8));
+    // printf("%d", temperature[0]);
+    // fflush(stdout);
 }
 
 static void callback_display(void* arg) {
     // Display the temperature value on the 7-segment display
-    display_b10(temperature[0]);
+    // display_b10(temperature[0]);
 }
 
 void start_timers() {
-    // const esp_timer_create_args_t periodic_timer_args_display = {
-    //         .callback = &callback_display,
-    //         .name = "periodic"
-    // };
+    const esp_timer_create_args_t periodic_timer_args_display = {
+            .callback = &callback_display,
+            .name = "periodic"
+    };
     const esp_timer_create_args_t periodic_timer_args_sensor = {
             .callback = &callback_sensor,
             .name = "periodic"
     };
-    // esp_timer_handle_t periodic_timer_display;
+    esp_timer_handle_t periodic_timer_display;
     esp_timer_handle_t periodic_timer_sensor;
-    // ESP_ERROR_CHECK(esp_timer_create(&periodic_timer_args_display, &periodic_timer_display));
+    ESP_ERROR_CHECK(esp_timer_create(&periodic_timer_args_display, &periodic_timer_display));
     ESP_ERROR_CHECK(esp_timer_create(&periodic_timer_args_sensor, &periodic_timer_sensor));
-    // ESP_ERROR_CHECK(esp_timer_start_periodic(periodic_timer_display, 10000)); // 10ms
+    ESP_ERROR_CHECK(esp_timer_start_periodic(periodic_timer_display, 10000)); // 10ms
     ESP_ERROR_CHECK(esp_timer_start_periodic(periodic_timer_sensor, 1000000)); // 1s
 }
 
