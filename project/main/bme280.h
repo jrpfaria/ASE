@@ -14,6 +14,19 @@ typedef struct {
 } bme280_data_t;
 
 /**
+ * \brief Data structure to hold BME280 sensor configuration.  
+ */
+typedef struct {
+    uint8_t osrs_t;         /**< Temperature oversampling. */
+    uint8_t osrs_p;         /**< Pressure oversampling. */
+    uint8_t osrs_h;         /**< Humidity oversampling. */
+    uint8_t mode;           /**< Sensor mode. */
+    uint8_t t_sb;           /**< Standby time. */
+    uint8_t filter;         /**< Filter coefficient. */
+    uint8_t spi3w_en;       /**< SPI 3-wire enable. */
+} bme280_config_t;
+
+/**
  * \brief Configures master bus and device handle for BME280 sensor.
  */
 esp_err_t bme280_init(i2c_master_bus_handle_t* pBusHandle,
@@ -26,6 +39,15 @@ esp_err_t bme280_init(i2c_master_bus_handle_t* pBusHandle,
 esp_err_t bme280_free(i2c_master_bus_handle_t busHandle,
                                          i2c_master_dev_handle_t sensorHandle);
 
+/**
+ * \brief Reads the BME280 status register to determine if the sensor is measuring.
+ */
+esp_err_t bme280_is_measuring(i2c_master_dev_handle_t sensorHandle, bool* isMeasuring);
+
+/**
+ * \brief Reads the BME280 status register to determine if the sensor is updating.
+ */
+esp_err_t bme280_is_updating(i2c_master_dev_handle_t sensorHandle, bool* isUpdating);
 
 /**
  * \brief Sets the mode of the BME280 sensor.
@@ -34,90 +56,51 @@ esp_err_t bme280_free(i2c_master_bus_handle_t busHandle,
  *         - [1] MODE_FORCED (single measurement)
  *         - [3] MODE_NORMAL (continuous measurement)
  */
-esp_err_t bme280_set_mode(i2c_master_dev_handle_t sensorHandle, uint8_t mode);
+esp_err_t bme280_set_mode(i2c_master_dev_handle_t sensorHandle, bme280_config_t* config);
 
 /**
- * \brief Sets the mode of the BME280 sensor to sleep.
+ * \brief Sets the oversampling rate for the BME280 sensor. 
  */
-esp_err_t bme280_set_mode_sleep(i2c_master_dev_handle_t sensorHandle);
+esp_err_t bme280_set_tp_oversampling(i2c_master_dev_handle_t sensorHandle, bme280_config_t* config);
 
 /**
- * \brief Sets the mode of the BME280 sensor to forced.
+ * \brief Sets the humidity oversampling rate for the BME280 sensor.  
  */
-esp_err_t bme280_set_mode_forced(i2c_master_dev_handle_t sensorHandle);
+esp_err_t bme280_set_h_oversampling(i2c_master_dev_handle_t sensorHandle, bme280_config_t* config);
 
 /**
- * \brief Sets the mode of the BME280 sensor to normal.
+ * \brief Sets the standby time for the BME280 sensor.   
  */
-esp_err_t bme280_set_mode_normal(i2c_master_dev_handle_t sensorHandle);
-
+esp_err_t bme280_set_standby_time(i2c_master_dev_handle_t sensorHandle, bme280_config_t* config);
 
 /**
- * \brief Reads the data from the BME280 sensor.
- *    Note: This function assumes that the sensor is in forced mode.
+ * \brief Sets the filter coefficient for the BME280 sensor.   
+ */
+esp_err_t bme280_set_filter(i2c_master_dev_handle_t sensorHandle, bme280_config_t* config);
+
+/**
+ * \brief Sets the SPI 3-wire enable for the BME280 sensor.
+ */
+esp_err_t bme280_set_spi3w_en(i2c_master_dev_handle_t sensorHandle, bme280_config_t* config);
+
+/**
+ * \brief Default setup for the BME280 sensor.
+ *     The default setup is as follows:
+ *        - Temperature oversampling: 1x
+ *       - Pressure oversampling: 1x
+ *      - Humidity oversampling: 1x
+ *     - Filter coefficient: off
+ */
+esp_err_t bme280_default_setup(i2c_master_dev_handle_t sensorHandle, bme280_config_t* config);
+
+/**
+ * \brief Reads the BME280 sensor data.
  */
 esp_err_t bme280_read_data(i2c_master_dev_handle_t sensorHandle, bme280_data_t* data);
 
 /**
- * \brief Reads the humidity from the BME280 sensor.
+ * \brief Data compensation for the BME280 sensor.
  */
-esp_err_t bme280_read_humidity(i2c_master_dev_handle_t sensorHandle, uint16_t* humidity);
-
-/**
- * \brief Reads the temperature from the BME280 sensor.
- */
-esp_err_t bme280_read_temperature(i2c_master_dev_handle_t sensorHandle, uint32_t* temperature);
-
-/**
- * \brief Reads the pressure from the BME280 sensor.
- */
-esp_err_t bme280_read_pressure(i2c_master_dev_handle_t sensorHandle, uint32_t* pressure);
-
-/**
- * \brief Sets the oversampling of the BME280 sensor for all measurements.
- *    The oversampling can be one of the following:
- *       - [1] OVERSAMPLE_1X
- *       - [2] OVERSAMPLE_2X
- *       - [3] OVERSAMPLE_4X
- *       - [4] OVERSAMPLE_8X
- *       - [5] OVERSAMPLE_16X
- */
-esp_err_t bme280_set_all_oversampling(i2c_master_dev_handle_t sensorHandle, uint8_t oversampling);
-
-/**
- * \brief Sets the temperature oversampling of the BME280 sensor.
- *    The oversampling can be one of the following:
- *       - [1] OVERSAMPLE_1X
- *       - [2] OVERSAMPLE_2X
- *       - [3] OVERSAMPLE_4X
- *       - [4] OVERSAMPLE_8X
- *       - [5] OVERSAMPLE_16X
- */
-esp_err_t bme280_set_temperature_oversampling(i2c_master_dev_handle_t sensorHandle, uint8_t oversampling);
-
-/**
- * \brief Sets the pressure oversampling of the BME280 sensor.
- *    The oversampling can be one of the following:
- *       - [1] OVERSAMPLE_1X
- *       - [2] OVERSAMPLE_2X
- *       - [3] OVERSAMPLE_4X
- *       - [4] OVERSAMPLE_8X
- *       - [5] OVERSAMPLE_16X
- */
-esp_err_t bme280_set_pressure_oversampling(i2c_master_dev_handle_t sensorHandle, uint8_t oversampling);
-
-/**
- * \brief Sets the humidity oversampling of the BME280 sensor.
- *    The oversampling can be one of the following:
- *       - [1] OVERSAMPLE_1X
- *       - [2] OVERSAMPLE_2X
- *       - [3] OVERSAMPLE_4X
- *       - [4] OVERSAMPLE_8X
- *       - [5] OVERSAMPLE_16X
- */
-esp_err_t bme280_set_humidity_oversampling(i2c_master_dev_handle_t sensorHandle, uint8_t oversampling);
-
-esp_err_t bme280_read_humidity_msb(i2c_master_dev_handle_t sensorHandle, uint8_t* humidity);
-esp_err_t bme280_read_humidity_lsb(i2c_master_dev_handle_t sensorHandle, uint8_t* humidity);
+esp_err_t bme280_compensate_data(i2c_master_dev_handle_t sensorHandle, bme280_data_t* data);
 
 #endif // __TEMP_SENSOR_BME280_H__INCLUDED__
