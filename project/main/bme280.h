@@ -249,6 +249,12 @@ void bme280_compensate_data(bme280_comp_data_t* data);
 /**
  * \brief Reads the BME280 sensor data.
  */
-esp_err_t bme280_read_data(i2c_master_dev_handle_t sensorHandle, bme280_comp_data_t* data);
+esp_err_t bme280_read_data(i2c_master_dev_handle_t sensorHandle, bme280_data_t* rData, bme280_comp_data_t* data);
+
+/**
+ * \brief Reads the BME280 sensor id. 
+ *     This is a sanity check to ensure the sensor is connected.
+ */
+esp_err_t bme280_read_id(i2c_master_dev_handle_t sensorHandle, uint8_t* id);
 
 #endif // __TEMP_SENSOR_BME280_H__INCLUDED__

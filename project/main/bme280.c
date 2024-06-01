@@ -281,13 +281,13 @@ esp_err_t bme280_default_setup(i2c_master_dev_handle_t sensorHandle)
     // ctrl_meas register
     config.osrs_t = OVERSAMPLE_1X;
     config.osrs_p = OVERSAMPLE_1X;
-    config.mode = MODE_SLEEP;
+    config.mode = MODE_NORMAL;
 
     const uint8_t txBuf[2] = {CTRL_MEAS_REG, (OVERSAMPLE_1X & 0x7) << 5 | (OVERSAMPLE_1X & 0x7) << 2 | (MODE_SLEEP & 0x3)};
     CHECK(i2c_master_transmit(sensorHandle, txBuf, sizeof(txBuf), -1));
 
     // config register
-    config.t_sb = STANDBY_0_5MS;
+    config.t_sb = STANDBY_1000MS;
     config.filter = FILTER_OFF;
     config.spi3w_en = SPI3W_OFF;
 
@@ -421,7 +421,7 @@ void bme280_compensate_data(bme280_comp_data_t* data)
 /**
  * \brief Reads the BME280 sensor data.
  */
-esp_err_t bme280_read_data(i2c_master_dev_handle_t sensorHandle, bme280_comp_data_t* data)
+esp_err_t bme280_read_data(i2c_master_dev_handle_t sensorHandle, bme280_data_t* rData, bme280_comp_data_t* data)
 {
     const uint8_t txBuf[1] = {DATA_REG};
     uint8_t rxBuf[8];
@@ -432,7 +432,24 @@ esp_err_t bme280_read_data(i2c_master_dev_handle_t sensorHandle, bme280_comp_dat
     rawData.temperature = (rxBuf[3] << 12) | (rxBuf[4] << 4) | (rxBuf[5] >> 4);
     rawData.humidity = (rxBuf[6] << 8) | rxBuf[7];
 
+    rData->pressure = rawData.pressure;
+    rData->temperature = rawData.temperature;
+    rData->humidity = rawData.humidity;
+
     bme280_compensate_data(data);
+
+    return ESP_OK;
+}
+
+/**
+ * \brief Reads the BME280 sensor id. 
+ *     This is a sanity check to ensure the sensor is connected.
+ */
+esp_err_t bme280_read_id(i2c_master_dev_handle_t sensorHandle, uint8_t* id)
+{
+    const uint8_t txBuf[1] = {ID_REG};
+
+    CHECK(i2c_master_transmit_receive(sensorHandle, txBuf, sizeof(txBuf), id, sizeof(id), -1));
 
     return ESP_OK;
 }

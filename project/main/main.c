@@ -1,6 +1,8 @@
 #include "bme280.h"
 #include "esp_timer.h"
 
+#define CHECK(x) do { esp_err_t err; if ((err = ESP_ERROR_CHECK_WITHOUT_ABORT(x)) != ESP_OK) { printf("Error %d\n", err); return; } } while(0)
+
 #define SDA 0
 #define SCL 1
 #define A 2
@@ -95,14 +97,25 @@ void display_b10(int value) {
 i2c_master_bus_handle_t busHandle;
 i2c_master_dev_handle_t sensorHandle;
 
-// uint16_t temperature[1]; // Temperature value
-// uint8_t humidity[1]; // Humidity value
-// uint8_t pressure[1]; // Pressure value
+bme280_comp_data_t sensorData;
+bme280_data_t sensorDataRaw;
+
 short int timer = 0; // Timer value
 
 static void callback_sensor(void* arg) {
-    // Read the temperature
-    // printf("\r %d ", humidity[0] | (pressure[0] << 8));
+    uint8_t id;
+    CHECK(bme280_read_id(sensorHandle, &id));
+    printf("ID: %x\n", id);
+
+    // // Read the temperature
+    CHECK(bme280_set_mode(sensorHandle, MODE_SLEEP));
+    // vTaskDelay(1000 / portTICK_PERIOD_MS);
+
+    CHECK(bme280_read_data(sensorHandle, &sensorDataRaw, &sensorData));
+    printf("Temperature: %lx\n", (uint32_t)sensorDataRaw.temperature);
+    printf("Pressure   : %lx\n", (uint32_t)sensorDataRaw.pressure);
+    printf("Humidity   : %lx\n", (uint32_t)sensorDataRaw.humidity);
+    // printf("\r %f %f %f ", humidity[0] | (pressure[0] << 8));
     // printf("%d", temperature[0]);
     // fflush(stdout);
 }
@@ -113,20 +126,20 @@ static void callback_display(void* arg) {
 }
 
 void start_timers() {
-    const esp_timer_create_args_t periodic_timer_args_display = {
-            .callback = &callback_display,
-            .name = "periodic"
-    };
+    // const esp_timer_create_args_t periodic_timer_args_display = {
+    //         .callback = &callback_display,
+    //         .name = "periodic"
+    // };
     const esp_timer_create_args_t periodic_timer_args_sensor = {
             .callback = &callback_sensor,
             .name = "periodic"
     };
     esp_timer_handle_t periodic_timer_display;
     esp_timer_handle_t periodic_timer_sensor;
-    ESP_ERROR_CHECK(esp_timer_create(&periodic_timer_args_display, &periodic_timer_display));
+    // ESP_ERROR_CHECK(esp_timer_create(&periodic_timer_args_display, &periodic_timer_display));
     ESP_ERROR_CHECK(esp_timer_create(&periodic_timer_args_sensor, &periodic_timer_sensor));
-    ESP_ERROR_CHECK(esp_timer_start_periodic(periodic_timer_display, 10000)); // 10ms
-    ESP_ERROR_CHECK(esp_timer_start_periodic(periodic_timer_sensor, 1000000)); // 1s
+    // ESP_ERROR_CHECK(esp_timer_start_periodic(periodic_timer_display, 10000)); // 10ms
+    ESP_ERROR_CHECK(esp_timer_start_periodic(periodic_timer_sensor, 5000000)); // 1s
 }
 
 void app_main(void) {
@@ -137,8 +150,10 @@ void app_main(void) {
     uint8_t sensorAddr = 0x77;
     int sdaPin = SDA;
     int sclPin = SCL;
-    uint32_t clkSpeedHz = 50000;
-    bme280_init(&busHandle, &sensorHandle, sensorAddr, sdaPin, sclPin, clkSpeedHz);
+    uint32_t clkSpeedHz = 400000;
+    CHECK(bme280_init(&busHandle, &sensorHandle, sensorAddr, sdaPin, sclPin, clkSpeedHz));
+
+    CHECK(bme280_default_setup(sensorHandle));
 
     start_timers();
 }
