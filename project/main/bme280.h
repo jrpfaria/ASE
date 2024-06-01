@@ -5,13 +5,22 @@
 #include "driver/i2c_master.h"
 
 /**
- * \brief Data structure to hold BME280 sensor data. 
+ * \brief Data structure to hold raw BME280 sensor data. 
  */
 typedef struct {
     uint32_t pressure;      /**< Pressure in Pa. */
     uint32_t temperature;   /**< Temperature in 0.01 degrees Celsius. */
-    uint16_t humidity;      /**< Humidity in 0.01% relative humidity. */
+    uint32_t humidity;      /**< Humidity in 0.01% relative humidity. */
 } bme280_data_t;
+
+/**
+ * \brief Data structure to hold compensated BME280 sensor data. 
+ */
+typedef struct {
+    double temperature;    /**< Temperature in 0.01 degrees Celsius. */
+    double pressure;      /**< Pressure in Pa. */
+    double humidity;      /**< Humidity in 0.01% relative humidity. */
+} bme280_comp_data_t;
 
 /**
  * \brief Data structure to hold BME280 sensor configuration.  
@@ -25,6 +34,30 @@ typedef struct {
     uint8_t filter;         /**< Filter coefficient. */
     uint8_t spi3w_en;       /**< SPI 3-wire enable. */
 } bme280_config_t;
+
+/**
+ * \brief Data sturcture to hold BME280 sensor calibration data. 
+ */
+typedef struct {
+    uint16_t dig_T1;        /**< Temperature calibration data. */
+    int16_t dig_T2;         /**< Temperature calibration data. */
+    int16_t dig_T3;         /**< Temperature calibration data. */
+    uint16_t dig_P1;        /**< Pressure calibration data. */
+    int16_t dig_P2;         /**< Pressure calibration data. */
+    int16_t dig_P3;         /**< Pressure calibration data. */
+    int16_t dig_P4;         /**< Pressure calibration data. */
+    int16_t dig_P5;         /**< Pressure calibration data. */
+    int16_t dig_P6;         /**< Pressure calibration data. */
+    int16_t dig_P7;         /**< Pressure calibration data. */
+    int16_t dig_P8;         /**< Pressure calibration data. */
+    int16_t dig_P9;         /**< Pressure calibration data. */
+    uint8_t dig_H1;         /**< Humidity calibration data. */
+    int16_t dig_H2;         /**< Humidity calibration data. */
+    uint8_t dig_H3;         /**< Humidity calibration data. */
+    int16_t dig_H4;         /**< Humidity calibration data. */
+    int16_t dig_H5;         /**< Humidity calibration data. */
+    int8_t dig_H6;          /**< Humidity calibration data. */
+} bme280_calib_data_t;
 
 /**
  * \brief Configures master bus and device handle for BME280 sensor.
@@ -129,13 +162,30 @@ esp_err_t bme280_default_setup(i2c_master_dev_handle_t sensorHandle, bme280_conf
 esp_err_t bme280_read_calibration_data(i2c_master_dev_handle_t sensorHandle, uint16_t* calibData);
 
 /**
- * \brief Reads the BME280 sensor data.
+ * \brief Temperature compensation for the BME280 sensor. 
  */
-esp_err_t bme280_read_data(i2c_master_dev_handle_t sensorHandle, bme280_data_t* data);
+double bme280_compensate_temperature(uint32_t adc_T);
+
+/**
+ * \brief Pressure compensation for the BME280 sensor. 
+ */
+double bme280_compensate_pressure(uint32_t adc_P);
+
+/**
+ * \brief Humidity compensation for the BME280 sensor. 
+ */
+double bme280_compensate_humidity(uint32_t adc_H);
 
 /**
  * \brief Data compensation for the BME280 sensor.
  */
-esp_err_t bme280_compensate_data(i2c_master_dev_handle_t sensorHandle, bme280_data_t* data);
+void bme280_compensate_data(bme280_data_t* data);
+
+
+/**
+ * \brief Reads the BME280 sensor data.
+ */
+esp_err_t bme280_read_data(i2c_master_dev_handle_t sensorHandle, bme280_data_t* data);
+
 
 #endif // __TEMP_SENSOR_BME280_H__INCLUDED__
