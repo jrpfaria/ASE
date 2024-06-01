@@ -94,6 +94,11 @@ esp_err_t bme280_set_spi3w_en(i2c_master_dev_handle_t sensorHandle, bme280_confi
 esp_err_t bme280_default_setup(i2c_master_dev_handle_t sensorHandle, bme280_config_t* config);
 
 /**
+ * \brief Reads the BME280 calibration data.
+ */
+esp_err_t bme280_read_calibration_data(i2c_master_dev_handle_t sensorHandle, uint16_t* calibData);
+
+/**
  * \brief Reads the BME280 sensor data.
  */
 esp_err_t bme280_read_data(i2c_master_dev_handle_t sensorHandle, bme280_data_t* data);
