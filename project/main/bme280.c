@@ -336,7 +336,7 @@ esp_err_t bme280_read_calibration_data(i2c_master_dev_handle_t sensorHandle)
     calibData.dig_P9 = (rxBuf[23] << 8) | rxBuf[22];
 
     const uint8_t txBuf2[1] = {CALIB_26_REG};
-    uint8_t rxBuf2[7];
+    uint8_t rxBuf2[8];
 
     CHECK(i2c_master_transmit_receive(sensorHandle, txBuf2, sizeof(txBuf2), rxBuf2, sizeof(rxBuf2), -1));
 
@@ -400,7 +400,7 @@ double bme280_compensate_humidity(int32_t adc_H)
 {
     double var_H;
 
-    var_H = (t_fine - 76800.0);
+    var_H = (((double)t_fine) - 76800.0);
     var_H = (adc_H - (((double)calibData.dig_H4) * 64.0 + ((double)calibData.dig_H5) / 16384.0 * var_H)) *
         (((double)calibData.dig_H2) / 65536.0 * (1.0 + ((double)calibData.dig_H6) / 67108864.0 * var_H *
         (1.0 + ((double)calibData.dig_H3) / 67108864.0 * var_H)));

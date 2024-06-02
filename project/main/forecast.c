@@ -1,5 +1,6 @@
 int computeForecast(double temperature, double humidity, double pressure)
 {
+    
     return 0;
 }
 

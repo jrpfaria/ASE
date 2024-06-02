@@ -130,14 +130,11 @@ static void callback_sensor(void *arg)
     CHECK(bme280_read_data(sensorHandle, &sensorDataRaw, &sensorData));
 
     vTaskDelay(1000 / portTICK_PERIOD_MS);
-
-    printf("Temperature: %lx\n", (uint32_t)sensorDataRaw.temperature);
-    printf("Pressure   : %lx\n", (uint32_t)sensorDataRaw.pressure);
     printf("Humidity   : %lx\n", (uint32_t)sensorDataRaw.humidity);
 
-    printf("Temperature:\t%4.2f*C\n", sensorData.temperature);
-    printf("Pressure   :\t%4.2fhPa\n", sensorData.pressure);
-    printf("Humidity   :\t%4.2f%%\n", sensorData.humidity);
+    printf("Temperature:\t%8.2f*C\n", sensorData.temperature);
+    printf("Pressure   :\t%8.2fhPa\n", sensorData.pressure);
+    printf("Humidity   :\t%8.2f%%\n", sensorData.humidity);
 
     // Calculate the required buffer size
     int bufferSize = 10;
