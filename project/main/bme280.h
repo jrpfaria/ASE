@@ -212,6 +212,11 @@ esp_err_t bme280_set_filter(i2c_master_dev_handle_t sensorHandle, uint8_t filter
 esp_err_t bme280_set_spi3w_en(i2c_master_dev_handle_t sensorHandle, uint8_t spi3w_en);
 
 /**
+ * \brief Reads the BME280 calibration data.
+ */
+esp_err_t bme280_read_calibration_data(i2c_master_dev_handle_t sensorHandle);
+
+/**
  * \brief Default setup for the BME280 sensor.
  *      The default setup is as follows:
  *         - Temperature oversampling: 1x
@@ -220,11 +225,6 @@ esp_err_t bme280_set_spi3w_en(i2c_master_dev_handle_t sensorHandle, uint8_t spi3
  *         - Filter coefficient: off
  */
 esp_err_t bme280_default_setup(i2c_master_dev_handle_t sensorHandle);
-
-/**
- * \brief Reads the BME280 calibration data.
- */
-esp_err_t bme280_read_calibration_data(i2c_master_dev_handle_t sensorHandle);
 
 /**
  * \brief Temperature compensation for the BME280 sensor. 

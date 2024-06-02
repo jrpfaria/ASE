@@ -111,9 +111,16 @@ static void callback_sensor(void* arg) {
     // vTaskDelay(1000 / portTICK_PERIOD_MS);
 
     CHECK(bme280_read_data(sensorHandle, &sensorDataRaw, &sensorData));
+
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
+
     printf("Temperature: %lx\n", (uint32_t)sensorDataRaw.temperature);
     printf("Pressure   : %lx\n", (uint32_t)sensorDataRaw.pressure);
     printf("Humidity   : %lx\n", (uint32_t)sensorDataRaw.humidity);
+
+    printf("Temperature: %f\n", sensorData.temperature);
+    printf("Pressure   : %f\n", sensorData.pressure);
+    printf("Humidity   : %f\n", sensorData.humidity);
     // printf("\r %f %f %f ", humidity[0] | (pressure[0] << 8));
     // printf("%d", temperature[0]);
     // fflush(stdout);
@@ -122,23 +129,24 @@ static void callback_sensor(void* arg) {
 static void callback_display(void* arg) {
     // Display the temperature value on the 7-segment display
     // display_b10(temperature[0]);
+    CHECK(bme280_set_mode(sensorHandle, MODE_FORCED));
 }
 
 void start_timers() {
-    // const esp_timer_create_args_t periodic_timer_args_display = {
-    //         .callback = &callback_display,
-    //         .name = "periodic"
-    // };
+    const esp_timer_create_args_t periodic_timer_args_display = {
+            .callback = &callback_display,
+            .name = "periodic"
+    };
     const esp_timer_create_args_t periodic_timer_args_sensor = {
             .callback = &callback_sensor,
             .name = "periodic"
     };
     esp_timer_handle_t periodic_timer_display;
     esp_timer_handle_t periodic_timer_sensor;
-    // ESP_ERROR_CHECK(esp_timer_create(&periodic_timer_args_display, &periodic_timer_display));
+    ESP_ERROR_CHECK(esp_timer_create(&periodic_timer_args_display, &periodic_timer_display));
     ESP_ERROR_CHECK(esp_timer_create(&periodic_timer_args_sensor, &periodic_timer_sensor));
-    // ESP_ERROR_CHECK(esp_timer_start_periodic(periodic_timer_display, 10000)); // 10ms
-    ESP_ERROR_CHECK(esp_timer_start_periodic(periodic_timer_sensor, 5000000)); // 1s
+    ESP_ERROR_CHECK(esp_timer_start_periodic(periodic_timer_display, 20000000)); // 20s
+    ESP_ERROR_CHECK(esp_timer_start_periodic(periodic_timer_sensor, 5000000)); // 5s
 }
 
 void app_main(void) {
@@ -154,21 +162,7 @@ void app_main(void) {
 
     CHECK(bme280_default_setup(sensorHandle));
 
-    vTaskDelay(5000 / portTICK_PERIOD_MS);
-
-    uint8_t mode[1];
-
-    CHECK(bme280_read_mode(sensorHandle, mode));
-
-    printf("Mode: %x\n", mode[0]);
-
-    CHECK(bme280_set_mode(sensorHandle, MODE_NORMAL));
-
-    vTaskDelay(2000 / portTICK_PERIOD_MS);
-
-    CHECK(bme280_read_mode(sensorHandle, mode));
-
-    printf("Mode: %x\n", mode[0]);
+    vTaskDelay(10000 / portTICK_PERIOD_MS);
 
     start_timers();
 }
