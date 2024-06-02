@@ -1,10 +1,8 @@
-int computeForecast(double temperature, double humidity, double pressure)
-{
-    
-    return 0;
-}
+#include <math.h>
 
-char* getForescast(int computedForecast)
+int oldestPressure = 0;
+
+char* forecastLUT(int computedForecast)
 {
     switch(computedForecast)
     {
@@ -67,4 +65,36 @@ char* getForescast(int computedForecast)
         default:
             return "Unknown";
     }
+}
+
+char* computeForecast(float temperature, float pressure, float altitude, int winds, int season)
+{
+    static int firstIterationFlag = 1;
+
+    if (firstIterationFlag)
+    {
+        oldestPressure = (int)pressure;
+        firstIterationFlag = 0;
+        return "Too early to forecast.";
+    }
+
+    float Z = 0;
+
+    float p0;
+    p0 = (0.0065 * altitude) / (temperature + (0.0065 * altitude) + 273.15);
+    p0 = powf((1 - p0), (-5.257));
+    p0 = p0 * pressure;
+
+    if (pressure - oldestPressure > 160)
+        Z = 185 - 0.16 * p0;
+    else if (pressure - oldestPressure < -160)
+        Z = 127 - 0.12 * p0;
+    else
+        Z = 144 - 0.13 * p0;
+
+    // Adjust the forecast based on the winds and season
+    // Z = winds ? Z + 1 : Z - 2;
+    // Z = season ? Z + 1 : Z - 1;
+
+    return forecastLUT((int)roundf(Z));
 }

@@ -3,6 +3,7 @@
 #include "wifi.h"
 #include "mqtt.h"
 #include "time.h"
+#include "forecast.h"
 #include <string.h>
 
 #define CHECK(x)                                                \
@@ -136,66 +137,80 @@ i2c_master_dev_handle_t sensorHandle;
 
 bme280_comp_data_t sensorData;
 
+int sensorReadIteration = 0;
+int forecastReady = 1;
+
 short int timer = 0; // Timer value
 
-static void callback_sensor(void *arg)
+static void callback_data(void *arg)
 {
-    uint8_t id;
-    CHECK(bme280_read_id(sensorHandle, &id));
-    printf("ID: %x\n", id);
-
-    // // Read the temperature
-    // vTaskDelay(1000 / portTICK_PERIOD_MS);
-
     CHECK(bme280_read_data(sensorHandle, &sensorData));
 
     vTaskDelay(1000 / portTICK_PERIOD_MS);
 
-    printf("Temperature: %8.2f\t *C\n", sensorData.temperature / 100.0);
-    printf("Pressure   : %8.2f\thPa\n", sensorData.pressure / 256.0 / 100.0);
-    printf("Humidity   : %8.2f\t%%RH\n", sensorData.humidity / 1024.0);
+    float temperature = sensorData.temperature / 100.0;
+    float pressure = sensorData.pressure / 256.0 / 100.0;
+    float humidity = sensorData.humidity / 1024.0;
 
-    char* time = getTime();
+    printf("Temperature: %8.2f\t *C\n", temperature);
+    printf("Pressure   : %8.2f\thPa\n", pressure);
+    printf("Humidity   : %8.2f\t%%RH\n", humidity);
+
+    // char* time = getTime();
     char* data = malloc(20);    
     if (data == NULL){
         printf("(CLB)Malloc failed\n");
         return;
     }
-    snprintf(data, 20, "%5.2f", sensorData.temperature / 100.0);
-    mqtt_publish(TEMP_TOPIC, data, time);
-    snprintf(data, 20, "%5.2f", sensorData.pressure / 256.0 / 100.0);
-    mqtt_publish(PRESS_TOPIC, data, time);
-    snprintf(data, 20, "%5.2f", sensorData.humidity / 1024.0);
-    mqtt_publish(HUM_TOPIC, data, time);
+    snprintf(data, 20, "%5.2f", temperature);
+    mqtt_publish(TEMP_TOPIC, data, ""/*time*/);
+    snprintf(data, 20, "%5.2f", pressure);
+    mqtt_publish(PRESS_TOPIC, data, ""/*time*/);
+    snprintf(data, 20, "%5.2f", humidity);
+    mqtt_publish(HUM_TOPIC, data, ""/*time*/);
 
-    free(time);
-    free(data);
+    // free(time);
+    // free(data);
+
+    if (forecastReady)
+    {
+        printf("%s\n", computeForecast(temperature,
+                                     pressure, 
+                                     DETI_ALTITUDE, NORTH_WINDS, SUMMER));
+        forecastReady = 0;
+    }
     // printf("\r %f %f %f ", humidity[0] | (pressure[0] << 8));
     // printf("%d", temperature[0]);
     // fflush(stdout);
 }
 
-static void callback_display(void *arg)
+static void callback_sensor_wakeup(void *arg)
 {
     // Display the temperature value on the 7-segment display
     // display_b10(temperature[0]);
     CHECK(bme280_set_mode(sensorHandle, MODE_FORCED));
+    if (sensorReadIteration++ == MINUTES_BETWEEN_FORECASTS)
+    {
+        forecastReady = 1;
+        sensorReadIteration = 0;
+    }
 }
 
 void start_timers()
 {
-    const esp_timer_create_args_t periodic_timer_args_display = {
-        .callback = &callback_display,
-        .name = "periodic"};
-    const esp_timer_create_args_t periodic_timer_args_sensor = {
-        .callback = &callback_sensor,
-        .name = "periodic"};
-    esp_timer_handle_t periodic_timer_display;
-    esp_timer_handle_t periodic_timer_sensor;
-    ESP_ERROR_CHECK(esp_timer_create(&periodic_timer_args_display, &periodic_timer_display));
-    ESP_ERROR_CHECK(esp_timer_create(&periodic_timer_args_sensor, &periodic_timer_sensor));
-    ESP_ERROR_CHECK(esp_timer_start_periodic(periodic_timer_display, 60000000)); // 1 min
-    ESP_ERROR_CHECK(esp_timer_start_periodic(periodic_timer_sensor, 10000000));   // 10s
+    const esp_timer_create_args_t periodic_timer_args_sensor_wakeup = {
+        .callback = &callback_sensor_wakeup,
+        .name = "wakeup"};
+    const esp_timer_create_args_t periodic_timer_args_data = {
+        .callback = &callback_data,
+        .name = "data"};
+    esp_timer_handle_t periodic_timer_sensor_wakeup;
+    esp_timer_handle_t periodic_timer_data;
+
+    ESP_ERROR_CHECK(esp_timer_create(&periodic_timer_args_sensor_wakeup, &periodic_timer_sensor_wakeup));
+    ESP_ERROR_CHECK(esp_timer_create(&periodic_timer_args_data, &periodic_timer_data));
+    ESP_ERROR_CHECK(esp_timer_start_periodic(periodic_timer_sensor_wakeup, 60000000)); // 1 min
+    ESP_ERROR_CHECK(esp_timer_start_periodic(periodic_timer_data, 10000000));   // 10s
 }
 
 void app_main(void)
