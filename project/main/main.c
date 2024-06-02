@@ -2,6 +2,7 @@
 #include "esp_timer.h"
 #include "wifi.h"
 #include "mqtt.h"
+#include "time.h"
 #include <string.h>
 
 #define CHECK(x)                                                \
@@ -44,6 +45,26 @@ char digit_to_segment[] = {
     0b01111001,
     0b01110001,
     0b01000000};
+
+char* getTime()
+{
+    time_t now;
+    struct tm *utc_time;
+    time(&now);
+    utc_time = gmtime(&now);
+    char* time_str = malloc(50);
+
+    if (utc_time == NULL)
+    {
+        printf("(GetTime) Malloc failed\n");
+        return NULL;
+    }
+
+    snprintf(time_str, 50, "date=%04d-%02d-%02d, time=%02d:%02d:%02d",
+             utc_time->tm_year + 1900, utc_time->tm_mon + 1, utc_time->tm_mday,
+             utc_time->tm_hour, utc_time->tm_min, utc_time->tm_sec);
+    return time_str;
+}
 
 void configure_io_ports(void)
 {
@@ -114,7 +135,6 @@ i2c_master_bus_handle_t busHandle;
 i2c_master_dev_handle_t sensorHandle;
 
 bme280_comp_data_t sensorData;
-bme280_data_t sensorDataRaw;
 
 short int timer = 0; // Timer value
 
@@ -127,31 +147,29 @@ static void callback_sensor(void *arg)
     // // Read the temperature
     // vTaskDelay(1000 / portTICK_PERIOD_MS);
 
-    CHECK(bme280_read_data(sensorHandle, &sensorDataRaw, &sensorData));
+    CHECK(bme280_read_data(sensorHandle, &sensorData));
 
     vTaskDelay(1000 / portTICK_PERIOD_MS);
-    printf("Humidity   : %lx\n", (uint32_t)sensorDataRaw.humidity);
 
-    printf("Temperature:\t%8.2f*C\n", sensorData.temperature);
-    printf("Pressure   :\t%8.2fhPa\n", sensorData.pressure);
-    printf("Humidity   :\t%8.2f%%\n", sensorData.humidity);
+    printf("Temperature: %8.2f\t *C\n", sensorData.temperature / 100.0);
+    printf("Pressure   : %8.2f\thPa\n", sensorData.pressure / 256.0 / 100.0);
+    printf("Humidity   : %8.2f\t%%RH\n", sensorData.humidity / 1024.0);
 
-    // Calculate the required buffer size
-    int bufferSize = 10;
-
-    // Allocate memory for the buffer
-    char *buffer = (char *)malloc(bufferSize * sizeof(char));
-    if (buffer == NULL)
-    {
-        fprintf(stderr, "Memory allocation failed\n");
+    char* time = getTime();
+    char* data = malloc(20);    
+    if (data == NULL){
+        printf("(CLB)Malloc failed\n");
+        return;
     }
+    snprintf(data, 20, "%5.2f", sensorData.temperature / 100.0);
+    mqtt_publish(TEMP_TOPIC, data, time);
+    snprintf(data, 20, "%5.2f", sensorData.pressure / 256.0 / 100.0);
+    mqtt_publish(PRESS_TOPIC, data, time);
+    snprintf(data, 20, "%5.2f", sensorData.humidity / 1024.0);
+    mqtt_publish(HUM_TOPIC, data, time);
 
-    // Format the string and store it in the buffer
-    sprintf(buffer, "%f\n", sensorData.temperature);
-
-    mqtt_publish("esp32_project/temperature", buffer);
-
-    free(buffer);
+    free(time);
+    free(data);
     // printf("\r %f %f %f ", humidity[0] | (pressure[0] << 8));
     // printf("%d", temperature[0]);
     // fflush(stdout);
@@ -176,8 +194,8 @@ void start_timers()
     esp_timer_handle_t periodic_timer_sensor;
     ESP_ERROR_CHECK(esp_timer_create(&periodic_timer_args_display, &periodic_timer_display));
     ESP_ERROR_CHECK(esp_timer_create(&periodic_timer_args_sensor, &periodic_timer_sensor));
-    ESP_ERROR_CHECK(esp_timer_start_periodic(periodic_timer_display, 20000000)); // 20s
-    ESP_ERROR_CHECK(esp_timer_start_periodic(periodic_timer_sensor, 5000000));   // 5s
+    ESP_ERROR_CHECK(esp_timer_start_periodic(periodic_timer_display, 60000000)); // 1 min
+    ESP_ERROR_CHECK(esp_timer_start_periodic(periodic_timer_sensor, 10000000));   // 10s
 }
 
 void app_main(void)

@@ -335,81 +335,90 @@ esp_err_t bme280_read_calibration_data(i2c_master_dev_handle_t sensorHandle)
     calibData.dig_P8 = (rxBuf[21] << 8) | rxBuf[20];
     calibData.dig_P9 = (rxBuf[23] << 8) | rxBuf[22];
 
+    const uint8_t txBuf1[1] = {CALIB_26_REG};
+    uint8_t rxBuf1[1];
+
+    CHECK(i2c_master_transmit_receive(sensorHandle, txBuf1, sizeof(txBuf1), rxBuf1, sizeof(rxBuf1), -1));
+
+    calibData.dig_H1 = rxBuf1[0];
+
     const uint8_t txBuf2[1] = {CALIB_26_REG};
-    uint8_t rxBuf2[8];
+    uint8_t rxBuf2[7];
 
     CHECK(i2c_master_transmit_receive(sensorHandle, txBuf2, sizeof(txBuf2), rxBuf2, sizeof(rxBuf2), -1));
 
     calibData.dig_H1 = rxBuf2[0];
-    calibData.dig_H2 = (rxBuf2[2] << 8) | rxBuf2[1];
-    calibData.dig_H3 = rxBuf2[3];
-    calibData.dig_H4 = (rxBuf2[4] << 4) | (rxBuf2[5] & 0xF);
-    calibData.dig_H5 = (rxBuf2[6] << 4) | (rxBuf2[5] >> 4);
-    calibData.dig_H6 = rxBuf2[7];
+    calibData.dig_H2 = (rxBuf2[1] << 8) | rxBuf2[0];
+    calibData.dig_H3 = rxBuf2[2];
+    calibData.dig_H4 = (rxBuf2[3] << 4) | (rxBuf2[4] & 0xF);
+    calibData.dig_H5 = (rxBuf2[5] << 4) | (rxBuf2[4] >> 4);
+    calibData.dig_H6 = rxBuf2[6];
 
     return ESP_OK;
 }
 
+int32_t t_fine;
 /**
  * \brief Temperature compensation for the BME280 sensor. 
  */
-double t_fine;
-double bme280_compensate_temperature(int32_t adc_T)
+uint32_t bme280_compensate_T_int32(int32_t adc_T)
 {
     int32_t var1, var2;
 
-    var1 = (((double)adc_T)/16384.0 - ((double)calibData.dig_T1)/1024.0) * ((double)calibData.dig_T2);
-    var2 = ((((double)adc_T)/131072.0 - ((double)calibData.dig_T1)/8192.0) *
-        (((double)adc_T)/131072.0 - ((double)calibData.dig_T1)/8192.0)) * ((double)calibData.dig_T3);
+    var1 = ((((adc_T >> 3) - ((int32_t)calibData.dig_T1 << 1))) * ((int32_t)calibData.dig_T2)) >> 11;
+    var2 = (((((adc_T >> 4) - ((int32_t)calibData.dig_T1)) * ((adc_T >> 4) - ((int32_t)calibData.dig_T1))) >> 12) * ((int32_t)calibData.dig_T3)) >> 14;
 
     t_fine = var1 + var2;
 
-    return (var1 + var2) / 5120.0;
+    return (t_fine * 5 + 128) >> 8;
 }
 
 /**
  * \brief Pressure compensation for the BME280 sensor. 
  */
-double bme280_compensate_pressure(int32_t adc_P)
+uint32_t bme280_compensate_P_int32(int32_t adc_P)
 {
-    double var1, var2, p;
+    int64_t var1, var2, p;
 
-    var1 = ((double)t_fine/2.0) - 64000.0;
-    var2 = var1 * var1 * ((double)calibData.dig_P6) / 32768.0;
-    var2 = var2 + var1 * ((double)calibData.dig_P5) * 2.0;
-    var2 = (var2/4.0)+(((double)calibData.dig_P4) * 65536.0);
-    var1 = (((double)calibData.dig_P3) * var1 * var1 / 524288.0 + 
-        ((double)calibData.dig_P2) * var1) / 524288.0;
-    var1 = (1.0 + var1 / 32768.0) * ((double)calibData.dig_P1);
-    if (var1 == 0.0)
+    var1 = ((int64_t)t_fine) - 128000;
+    var2 = var1 * var1 * (int64_t)calibData.dig_P6;
+    var2 = var2 + ((var1 * (int64_t)calibData.dig_P5) << 17);
+    var2 = var2 + (((int64_t)calibData.dig_P4) << 35);
+    var1 = ((var1 * var1 * (int64_t)calibData.dig_P3) >> 8) + ((var1 * (int64_t)calibData.dig_P2) << 12);
+    var1 = (((((int64_t)1) << 47) + var1)) * ((int64_t)calibData.dig_P1) >> 33;
+
+    if (var1 == 0)
     {
         return 0; // avoid exception caused by division by zero
     }
-    p = 1048576.0 - (double)adc_P;
-    p = (p - (var2 / 4096.0)) * 6250.0 / var1;
-    var1 = ((double)calibData.dig_P9) * p * p / 2147483648.0;
-    var2 = p * ((double)calibData.dig_P8) / 32768.0;
-    p = p + (var1 + var2 + ((double)calibData.dig_P7)) / 16.0;
-    return p;
+
+    p = 1048576 - adc_P;
+    p = (((p << 31) - var2) * 3125) / var1;
+    var1 = (((int64_t)calibData.dig_P9) * (p >> 13) * (p >> 13)) >> 25;
+    var2 = (((int64_t)calibData.dig_P8) * p) >> 19;
+
+    p = ((p + var1 + var2) >> 8) + (((int64_t)calibData.dig_P7) << 4);
+
+    return (uint32_t)p;
 }
 
 /**
- * \brief Humidity compensation for the BME280 sensor. 
+ * \brief Humidity compensation for the BME280 sensor.
  */
-double bme280_compensate_humidity(int32_t adc_H)
+uint32_t bme280_compensate_H_int32(int32_t adc_H)
 {
-    double var_H;
+    int32_t v_x1_u32r;
 
-    var_H = (((double)t_fine) - 76800.0);
-    var_H = (adc_H - (((double)calibData.dig_H4) * 64.0 + ((double)calibData.dig_H5) / 16384.0 * var_H)) *
-        (((double)calibData.dig_H2) / 65536.0 * (1.0 + ((double)calibData.dig_H6) / 67108864.0 * var_H *
-        (1.0 + ((double)calibData.dig_H3) / 67108864.0 * var_H)));
-    var_H = var_H * (1.0 - ((double)calibData.dig_H1) * var_H / 524288.0);
-    if (var_H > 100.0)
-        var_H = 100.0;
-    else if (var_H < 0.0)
-        var_H = 0.0;
-    return var_H;
+    v_x1_u32r = (t_fine - ((int32_t)76800));
+    v_x1_u32r = (((((adc_H << 14) - (((int32_t)calibData.dig_H4) << 20) - (((int32_t)calibData.dig_H5) * v_x1_u32r)) +
+        ((int32_t)16384)) >> 15) * (((((((v_x1_u32r * ((int32_t)calibData.dig_H6)) >> 10) * (((v_x1_u32r *
+        ((int32_t)calibData.dig_H3)) >> 11) + ((int32_t)32768))) >> 10) + ((int32_t)2097152)) * ((int32_t)calibData.dig_H2) +
+        8192) >> 14));
+    v_x1_u32r = (v_x1_u32r - (((((v_x1_u32r >> 15) * (v_x1_u32r >> 15)) >> 7) * ((int32_t)calibData.dig_H1)) >> 4));
+    v_x1_u32r = (v_x1_u32r < 0 ? 0 : v_x1_u32r);
+    v_x1_u32r = (v_x1_u32r > 419430400 ? 419430400 : v_x1_u32r);
+
+    return (uint32_t)(v_x1_u32r >> 12);
 }
 
 /**
@@ -417,15 +426,15 @@ double bme280_compensate_humidity(int32_t adc_H)
  */
 void bme280_compensate_data(bme280_comp_data_t* data)
 {
-    data->temperature = bme280_compensate_temperature(rawData.temperature);
-    data->pressure = bme280_compensate_pressure(rawData.pressure);
-    data->humidity = bme280_compensate_humidity(rawData.humidity);
+    data->temperature = bme280_compensate_T_int32(rawData.temperature);
+    data->pressure = bme280_compensate_P_int32(rawData.pressure);
+    data->humidity = bme280_compensate_H_int32(rawData.humidity);
 }
 
 /**
  * \brief Reads the BME280 sensor data.
  */
-esp_err_t bme280_read_data(i2c_master_dev_handle_t sensorHandle, bme280_data_t* rData, bme280_comp_data_t* data)
+esp_err_t bme280_read_data(i2c_master_dev_handle_t sensorHandle, bme280_comp_data_t* data)
 {
     const uint8_t txBuf[1] = {DATA_REG};
     uint8_t rxBuf[8];
@@ -435,10 +444,6 @@ esp_err_t bme280_read_data(i2c_master_dev_handle_t sensorHandle, bme280_data_t* 
     rawData.pressure = (rxBuf[0] << 12) | (rxBuf[1] << 4) | (rxBuf[2] >> 4);
     rawData.temperature = (rxBuf[3] << 12) | (rxBuf[4] << 4) | (rxBuf[5] >> 4);
     rawData.humidity = (rxBuf[6] << 8) | rxBuf[7];
-
-    rData->pressure = rawData.pressure;
-    rData->temperature = rawData.temperature;
-    rData->humidity = rawData.humidity;
 
     bme280_compensate_data(data);
 
