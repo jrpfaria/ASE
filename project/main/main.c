@@ -1,7 +1,19 @@
 #include "bme280.h"
 #include "esp_timer.h"
+#include "wifi.h"
+#include "mqtt.h"
+#include <string.h>
 
-#define CHECK(x) do { esp_err_t err; if ((err = ESP_ERROR_CHECK_WITHOUT_ABORT(x)) != ESP_OK) { printf("Error %d\n", err); return; } } while(0)
+#define CHECK(x)                                                \
+    do                                                          \
+    {                                                           \
+        esp_err_t err;                                          \
+        if ((err = ESP_ERROR_CHECK_WITHOUT_ABORT(x)) != ESP_OK) \
+        {                                                       \
+            printf("Error %d\n", err);                          \
+            return;                                             \
+        }                                                       \
+    } while (0)
 
 #define SDA 0
 #define SCL 1
@@ -31,10 +43,10 @@ char digit_to_segment[] = {
     0b01011110,
     0b01111001,
     0b01110001,
-    0b01000000
-};
+    0b01000000};
 
-void configure_io_ports(void) {
+void configure_io_ports(void)
+{
     // Configure the GPIOs for the 7-segment display
     gpio_reset_pin(A);
     gpio_set_direction(A, GPIO_MODE_OUTPUT);
@@ -62,7 +74,8 @@ void configure_io_ports(void) {
     gpio_set_direction(DISPLAY, GPIO_MODE_OUTPUT);
 }
 
-void display(char value) {   
+void display(char value)
+{
     static char active_display = 0;
     char digit = active_display ? (value >> 4) : (value & 0x0F);
     char segment = digit_to_segment[(int)digit];
@@ -77,11 +90,14 @@ void display(char value) {
     active_display = !active_display;
 }
 
-void display_b10(int value) {   
+void display_b10(int value)
+{
     static char active_display = 0;
     char digit;
-    if (value>=0) digit = active_display ? (value / 10) : (value % 10);
-    else digit = active_display ? 16 : (-value % 10);
+    if (value >= 0)
+        digit = active_display ? (value / 10) : (value % 10);
+    else
+        digit = active_display ? 16 : (-value % 10);
     char segment = digit_to_segment[(int)digit];
     gpio_set_level(DISPLAY, active_display);
     gpio_set_level(A, (segment & 0b0000001));
@@ -102,7 +118,8 @@ bme280_data_t sensorDataRaw;
 
 short int timer = 0; // Timer value
 
-static void callback_sensor(void* arg) {
+static void callback_sensor(void *arg)
+{
     uint8_t id;
     CHECK(bme280_read_id(sensorHandle, &id));
     printf("ID: %x\n", id);
@@ -118,38 +135,60 @@ static void callback_sensor(void* arg) {
     printf("Pressure   : %lx\n", (uint32_t)sensorDataRaw.pressure);
     printf("Humidity   : %lx\n", (uint32_t)sensorDataRaw.humidity);
 
-    printf("Temperature: %f\n", sensorData.temperature);
-    printf("Pressure   : %f\n", sensorData.pressure);
-    printf("Humidity   : %f\n", sensorData.humidity);
+    printf("Temperature:\t%4.2f*C\n", sensorData.temperature);
+    printf("Pressure   :\t%4.2fhPa\n", sensorData.pressure);
+    printf("Humidity   :\t%4.2f%%\n", sensorData.humidity);
+
+    // Calculate the required buffer size
+    int bufferSize = 10;
+
+    // Allocate memory for the buffer
+    char *buffer = (char *)malloc(bufferSize * sizeof(char));
+    if (buffer == NULL)
+    {
+        fprintf(stderr, "Memory allocation failed\n");
+    }
+
+    // Format the string and store it in the buffer
+    sprintf(buffer, "%f\n", sensorData.temperature);
+
+    mqtt_publish("esp32_project/temperature", buffer);
+
+    free(buffer);
     // printf("\r %f %f %f ", humidity[0] | (pressure[0] << 8));
     // printf("%d", temperature[0]);
     // fflush(stdout);
 }
 
-static void callback_display(void* arg) {
+static void callback_display(void *arg)
+{
     // Display the temperature value on the 7-segment display
     // display_b10(temperature[0]);
     CHECK(bme280_set_mode(sensorHandle, MODE_FORCED));
 }
 
-void start_timers() {
+void start_timers()
+{
     const esp_timer_create_args_t periodic_timer_args_display = {
-            .callback = &callback_display,
-            .name = "periodic"
-    };
+        .callback = &callback_display,
+        .name = "periodic"};
     const esp_timer_create_args_t periodic_timer_args_sensor = {
-            .callback = &callback_sensor,
-            .name = "periodic"
-    };
+        .callback = &callback_sensor,
+        .name = "periodic"};
     esp_timer_handle_t periodic_timer_display;
     esp_timer_handle_t periodic_timer_sensor;
     ESP_ERROR_CHECK(esp_timer_create(&periodic_timer_args_display, &periodic_timer_display));
     ESP_ERROR_CHECK(esp_timer_create(&periodic_timer_args_sensor, &periodic_timer_sensor));
     ESP_ERROR_CHECK(esp_timer_start_periodic(periodic_timer_display, 20000000)); // 20s
-    ESP_ERROR_CHECK(esp_timer_start_periodic(periodic_timer_sensor, 5000000)); // 5s
+    ESP_ERROR_CHECK(esp_timer_start_periodic(periodic_timer_sensor, 5000000));   // 5s
 }
 
-void app_main(void) {
+void app_main(void)
+{
+    wifi_init();
+    wifi_start();
+    mqtt_init();
+
     // Configure the I/O ports
     configure_io_ports();
 
