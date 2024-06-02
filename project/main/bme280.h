@@ -257,4 +257,9 @@ esp_err_t bme280_read_data(i2c_master_dev_handle_t sensorHandle, bme280_data_t* 
  */
 esp_err_t bme280_read_id(i2c_master_dev_handle_t sensorHandle, uint8_t* id);
 
+/**
+ * \brief Reads the BME280 mode. 
+ */
+esp_err_t bme280_read_mode(i2c_master_dev_handle_t sensorHandle, uint8_t* mode);
+
 #endif // __TEMP_SENSOR_BME280_H__INCLUDED__

@@ -281,7 +281,7 @@ esp_err_t bme280_default_setup(i2c_master_dev_handle_t sensorHandle)
     // ctrl_meas register
     config.osrs_t = OVERSAMPLE_1X;
     config.osrs_p = OVERSAMPLE_1X;
-    config.mode = MODE_NORMAL;
+    config.mode = MODE_SLEEP;
 
     const uint8_t txBuf[2] = {CTRL_MEAS_REG, (OVERSAMPLE_1X & 0x7) << 5 | (OVERSAMPLE_1X & 0x7) << 2 | (MODE_SLEEP & 0x3)};
     CHECK(i2c_master_transmit(sensorHandle, txBuf, sizeof(txBuf), -1));
@@ -450,6 +450,21 @@ esp_err_t bme280_read_id(i2c_master_dev_handle_t sensorHandle, uint8_t* id)
     const uint8_t txBuf[1] = {ID_REG};
 
     CHECK(i2c_master_transmit_receive(sensorHandle, txBuf, sizeof(txBuf), id, sizeof(id), -1));
+
+    return ESP_OK;
+}
+
+/**
+ * \brief Reads the BME280 mode. 
+ */
+esp_err_t bme280_read_mode(i2c_master_dev_handle_t sensorHandle, uint8_t* mode)
+{
+    const uint8_t txBuf[1] = {CTRL_MEAS_REG};
+    uint8_t rxBuf[1];
+
+    CHECK(i2c_master_transmit_receive(sensorHandle, txBuf, sizeof(txBuf), rxBuf, sizeof(rxBuf), -1));
+
+    *mode = rxBuf[0] & 0x3;
 
     return ESP_OK;
 }

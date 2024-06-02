@@ -108,7 +108,6 @@ static void callback_sensor(void* arg) {
     printf("ID: %x\n", id);
 
     // // Read the temperature
-    CHECK(bme280_set_mode(sensorHandle, MODE_SLEEP));
     // vTaskDelay(1000 / portTICK_PERIOD_MS);
 
     CHECK(bme280_read_data(sensorHandle, &sensorDataRaw, &sensorData));
@@ -154,6 +153,22 @@ void app_main(void) {
     CHECK(bme280_init(&busHandle, &sensorHandle, sensorAddr, sdaPin, sclPin, clkSpeedHz));
 
     CHECK(bme280_default_setup(sensorHandle));
+
+    vTaskDelay(5000 / portTICK_PERIOD_MS);
+
+    uint8_t mode[1];
+
+    CHECK(bme280_read_mode(sensorHandle, mode));
+
+    printf("Mode: %x\n", mode[0]);
+
+    CHECK(bme280_set_mode(sensorHandle, MODE_NORMAL));
+
+    vTaskDelay(2000 / portTICK_PERIOD_MS);
+
+    CHECK(bme280_read_mode(sensorHandle, mode));
+
+    printf("Mode: %x\n", mode[0]);
 
     start_timers();
 }
