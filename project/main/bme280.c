@@ -19,6 +19,8 @@ static bme280_config_t config;
  */
 static bme280_data_t rawData;
 
+// Header to allow for forward declaration
+esp_err_t bme280_read_calibration_data(i2c_master_dev_handle_t sensorHandle);
 
 /**
  * \brief Configures master bus and device handle for BME280 sensor.
@@ -45,6 +47,8 @@ esp_err_t bme280_init(i2c_master_bus_handle_t* pBusHandle,
     };
 
     CHECK(i2c_master_bus_add_device(*pBusHandle, &i2cDevCfg, pSensorHandle));
+
+    CHECK(bme280_read_calibration_data(*pSensorHandle));
 
     return ESP_OK;
 }
@@ -269,44 +273,6 @@ esp_err_t bme280_set_spi3w_en(i2c_master_dev_handle_t sensorHandle, uint8_t spi3
 }
 
 /**
- * \brief Reads the BME280 calibration data.
- */
-esp_err_t bme280_read_calibration_data(i2c_master_dev_handle_t sensorHandle)
-{
-    const uint8_t txBuf[1] = {CALIB_00_REG};
-    uint8_t rxBuf[24];
-
-    CHECK(i2c_master_transmit_receive(sensorHandle, txBuf, sizeof(txBuf), rxBuf, sizeof(rxBuf), -1));
-
-    calibData.dig_T1 = (rxBuf[1] << 8) | rxBuf[0];
-    calibData.dig_T2 = (rxBuf[3] << 8) | rxBuf[2];
-    calibData.dig_T3 = (rxBuf[5] << 8) | rxBuf[4];
-    calibData.dig_P1 = (rxBuf[7] << 8) | rxBuf[6];
-    calibData.dig_P2 = (rxBuf[9] << 8) | rxBuf[8];
-    calibData.dig_P3 = (rxBuf[11] << 8) | rxBuf[10];
-    calibData.dig_P4 = (rxBuf[13] << 8) | rxBuf[12];
-    calibData.dig_P5 = (rxBuf[15] << 8) | rxBuf[14];
-    calibData.dig_P6 = (rxBuf[17] << 8) | rxBuf[16];
-    calibData.dig_P7 = (rxBuf[19] << 8) | rxBuf[18];
-    calibData.dig_P8 = (rxBuf[21] << 8) | rxBuf[20];
-    calibData.dig_P9 = (rxBuf[23] << 8) | rxBuf[22];
-
-    const uint8_t txBuf2[1] = {CALIB_26_REG};
-    uint8_t rxBuf2[7];
-
-    CHECK(i2c_master_transmit_receive(sensorHandle, txBuf2, sizeof(txBuf2), rxBuf2, sizeof(rxBuf2), -1));
-
-    calibData.dig_H1 = rxBuf2[0];
-    calibData.dig_H2 = (rxBuf2[2] << 8) | rxBuf2[1];
-    calibData.dig_H3 = rxBuf2[3];
-    calibData.dig_H4 = (rxBuf2[4] << 4) | (rxBuf2[5] & 0xF);
-    calibData.dig_H5 = (rxBuf2[6] << 4) | (rxBuf2[5] >> 4);
-    calibData.dig_H6 = rxBuf2[7];
-
-    return ESP_OK;
-}
-
-/**
  * \brief Default setup for the BME280 sensor.
  *      The default setup is as follows:
  *         - Temperature oversampling: 1x
@@ -343,8 +309,43 @@ esp_err_t bme280_default_setup(i2c_master_dev_handle_t sensorHandle)
     // ctrl_hum register
     CHECK(bme280_set_humidity_oversampling(sensorHandle, OVERSAMPLE_1X));
 
-    // Read the calibration data
-    CHECK(bme280_read_calibration_data(sensorHandle));
+    return ESP_OK;
+}
+
+/**
+ * \brief Reads the BME280 calibration data.
+ */
+esp_err_t bme280_read_calibration_data(i2c_master_dev_handle_t sensorHandle)
+{
+    const uint8_t txBuf[1] = {CALIB_00_REG};
+    uint8_t rxBuf[24];
+
+    CHECK(i2c_master_transmit_receive(sensorHandle, txBuf, sizeof(txBuf), rxBuf, sizeof(rxBuf), -1));
+
+    calibData.dig_T1 = (rxBuf[1] << 8) | rxBuf[0];
+    calibData.dig_T2 = (rxBuf[3] << 8) | rxBuf[2];
+    calibData.dig_T3 = (rxBuf[5] << 8) | rxBuf[4];
+    calibData.dig_P1 = (rxBuf[7] << 8) | rxBuf[6];
+    calibData.dig_P2 = (rxBuf[9] << 8) | rxBuf[8];
+    calibData.dig_P3 = (rxBuf[11] << 8) | rxBuf[10];
+    calibData.dig_P4 = (rxBuf[13] << 8) | rxBuf[12];
+    calibData.dig_P5 = (rxBuf[15] << 8) | rxBuf[14];
+    calibData.dig_P6 = (rxBuf[17] << 8) | rxBuf[16];
+    calibData.dig_P7 = (rxBuf[19] << 8) | rxBuf[18];
+    calibData.dig_P8 = (rxBuf[21] << 8) | rxBuf[20];
+    calibData.dig_P9 = (rxBuf[23] << 8) | rxBuf[22];
+
+    const uint8_t txBuf2[1] = {CALIB_26_REG};
+    uint8_t rxBuf2[7];
+
+    CHECK(i2c_master_transmit_receive(sensorHandle, txBuf2, sizeof(txBuf2), rxBuf2, sizeof(rxBuf2), -1));
+
+    calibData.dig_H1 = rxBuf2[0];
+    calibData.dig_H2 = (rxBuf2[2] << 8) | rxBuf2[1];
+    calibData.dig_H3 = rxBuf2[3];
+    calibData.dig_H4 = (rxBuf2[4] << 4) | (rxBuf2[5] & 0xF);
+    calibData.dig_H5 = (rxBuf2[6] << 4) | (rxBuf2[5] >> 4);
+    calibData.dig_H6 = rxBuf2[7];
 
     return ESP_OK;
 }
