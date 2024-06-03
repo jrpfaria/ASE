@@ -93,7 +93,7 @@ char* computeForecast(float temperature, float pressure, float altitude, int win
         Z = 144 - 0.13 * p0;
 
     // Adjust the forecast based on the winds and season
-    // Z = winds ? Z + 1 : Z - 2;
+    Z = winds ? Z - 1 : Z + 1;
     // Z = season ? Z + 1 : Z - 1;
 
     return forecastLUT((int)roundf(Z));

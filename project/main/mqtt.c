@@ -105,15 +105,7 @@ void mqtt_init(void)
     esp_mqtt_client_start(client);
 }
 
-void mqtt_publish(char *topic, char *data, char* time)
+void mqtt_publish(char *topic, char *data)
 {
-    // char *post = malloc(strlen(data) + strlen(time) + 3);
-    // if (post == NULL)
-    // {
-    //     printf("(MQTT) Failed to allocate memory for post\n");
-    //     return;
-    // }
-    // sprintf(post, "%s, %s", time, data);
     esp_mqtt_client_publish(client, topic, data, 0, 0, 0);
-    // free(post);
 }

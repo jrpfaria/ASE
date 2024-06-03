@@ -151,37 +151,47 @@ static void callback_data(void *arg)
     float temperature = sensorData.temperature / 100.0;
     float pressure = sensorData.pressure / 256.0 / 100.0;
     float humidity = sensorData.humidity / 1024.0;
+    
+    static int firstIterationFlag = 1;
 
+    if (firstIterationFlag){
+        printf("\033[H\033[J"); // Clear the screen
+        firstIterationFlag = 0;
+    }
+
+    printf("\033[1;1H"); // Move cursor to line 1, column 1    
     printf("Temperature: %8.2f\t *C\n", temperature);
     printf("Pressure   : %8.2f\thPa\n", pressure);
     printf("Humidity   : %8.2f\t%%RH\n", humidity);
 
     // char* time = getTime();
-    char* data = malloc(20);    
+    char* data = malloc(40);    
     if (data == NULL){
         printf("(CLB)Malloc failed\n");
         return;
     }
-    snprintf(data, 20, "%5.2f", temperature);
-    mqtt_publish(TEMP_TOPIC, data, ""/*time*/);
-    snprintf(data, 20, "%5.2f", pressure);
-    mqtt_publish(PRESS_TOPIC, data, ""/*time*/);
-    snprintf(data, 20, "%5.2f", humidity);
-    mqtt_publish(HUM_TOPIC, data, ""/*time*/);
+    snprintf(data, 40, "%5.2f", temperature);
+    mqtt_publish(TEMP_TOPIC, data);
+    snprintf(data, 40, "%5.2f", pressure);
+    mqtt_publish(PRESS_TOPIC, data);
+    snprintf(data, 40, "%5.2f", humidity);
+    mqtt_publish(HUM_TOPIC, data);
 
-    // free(time);
-    // free(data);
+    fflush(stdout);
 
     if (forecastReady)
     {
-        printf("%s\n", computeForecast(temperature,
+        memcpy(data, computeForecast(temperature,
                                      pressure, 
-                                     DETI_ALTITUDE, NORTH_WINDS, SUMMER));
+                                     DETI_ALTITUDE, NORTH_WINDS, SUMMER), 40); 
+        printf("\r%40s\n", data);
+        mqtt_publish(FORECAST_TOPIC, data);
+
         forecastReady = 0;
     }
-    // printf("\r %f %f %f ", humidity[0] | (pressure[0] << 8));
-    // printf("%d", temperature[0]);
-    // fflush(stdout);
+
+
+    free(data);
 }
 
 static void callback_sensor_wakeup(void *arg)
@@ -189,7 +199,7 @@ static void callback_sensor_wakeup(void *arg)
     // Display the temperature value on the 7-segment display
     // display_b10(temperature[0]);
     CHECK(bme280_set_mode(sensorHandle, MODE_FORCED));
-    if (sensorReadIteration++ == MINUTES_BETWEEN_FORECASTS)
+    if (sensorReadIteration++ == 1/*MINUTES_BETWEEN_FORECASTS*/)
     {
         forecastReady = 1;
         sensorReadIteration = 0;

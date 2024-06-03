@@ -1,8 +1,9 @@
 #pragma once
 
-#define TEMP_TOPIC "ASEP1G4/temperature"
-#define PRESS_TOPIC "ASEP1G4/pressure"
-#define HUM_TOPIC "ASEP1G4/humidity"
+#define TEMP_TOPIC "temperature"
+#define PRESS_TOPIC "pressure"
+#define HUM_TOPIC "humidity"
+#define FORECAST_TOPIC "forecast"
 
 void mqtt_init(void);
-void mqtt_publish(char *topic, char *data, char* time);
+void mqtt_publish(char *topic, char *data);
