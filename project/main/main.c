@@ -2,14 +2,23 @@
 #include "esp_timer.h"
 #include "wifi.h"
 #include "mqtt.h"
-#include "time.h"
 #include "forecast.h"
+#include "bin7seg.h"
 #include <string.h>
 
 #define SENSOR_ADDR 0x77
 #define SDA_PIN 0
 #define SCL_PIN 1
 #define CLK_SPEED_HZ 400000
+
+#define A 2
+#define B 3
+#define C 8
+#define D 5
+#define E 4
+#define F 7
+#define G 6
+#define DISPLAY 10
 
 #define CHECK(x)                                                \
     do                                                          \
@@ -26,9 +35,16 @@
     do                                                          \
     {                                                           \
         snprintf(aux, 7, "%5.2f", x);                           \
-        mqtt_publish(topic, aux);                          \
+        mqtt_publish(topic, aux);                               \
     } while (0)
 
+#define configure_pin(x)                                        \
+    do                                                          \
+    {                                                           \
+        gpio_reset_pin(x);                                      \
+        gpio_set_direction(x, GPIO_MODE_OUTPUT);                \
+    } while (0);
+    
 // Global Variables
 i2c_master_bus_handle_t busHandle;      // I2C bus handle
 i2c_master_dev_handle_t sensorHandle;   // I2C device handle
@@ -36,6 +52,35 @@ bme280_comp_data_t sensorData;          // Sensor data
 int sensorReadIteration = 0;            // Sensor read iteration
 int forecastReady = 1;                  // Flag to indicate if the forecast is ready to be computed
 char forecastData[40];                  // Forecast data
+char forecastToDisplay[7];              // Forecast to display
+int timer = 0;                          // Timer to control the display
+
+void configure_io_ports()
+{
+    configure_pin(A);
+    configure_pin(B);
+    configure_pin(C);
+    configure_pin(D);
+    configure_pin(E);
+    configure_pin(F);
+    configure_pin(G);
+    configure_pin(DISPLAY);
+}
+
+void displayStatus(char* status)
+{
+    static int active_display = 0;
+    char segment = char2seg(status[active_display]);
+    gpio_set_level(DISPLAY, active_display);
+    gpio_set_level(A, (segment & 0b0000001));
+    gpio_set_level(B, (segment & 0b0000010));
+    gpio_set_level(C, (segment & 0b0000100));
+    gpio_set_level(D, (segment & 0b0001000));
+    gpio_set_level(E, (segment & 0b0010000));
+    gpio_set_level(F, (segment & 0b0100000));
+    gpio_set_level(G, (segment & 0b1000000));
+    active_display = !active_display;
+}
 
 void print_data()
 {
@@ -47,6 +92,7 @@ void print_data()
     printf("Pressure   : %8.2f\thPa\n", sensorData.pressure);
     printf("Humidity   : %8.2f\t%%RH\n", sensorData.humidity);
     printf("%40s\n", forecastData);
+    fflush(stdout);
 }
 
 void post_data()
@@ -62,7 +108,7 @@ static void callback_sensor(void *arg)
 {
     CHECK(bme280_set_mode(sensorHandle, MODE_FORCED));
 
-    if (sensorReadIteration++ == MINUTES_BETWEEN_FORECASTS)
+    if (sensorReadIteration++ == 1/*MINUTES_BETWEEN_FORECASTS*/)
     {
         forecastReady = 1;
         sensorReadIteration = 0;
@@ -74,36 +120,36 @@ static void callback_sensor(void *arg)
 
     if (forecastReady)
     {
+        int forecastIndex[1];
         memcpy(forecastData, computeForecast(sensorData.temperature,
                                              sensorData.pressure, 
-                                             DETI_ALTITUDE, NORTH_WINDS, SUMMER), 40); 
+                                             DETI_ALTITUDE, NORTH_WINDS, SUMMER,
+                                             forecastIndex), 40); 
+        
+        memcpy(forecastToDisplay, getWeatherState(*forecastIndex), 7);
+        
         forecastReady = 0;
     }
 
     print_data();
 
     post_data();
-
-    fflush(stdout);
 }
 
-void vSensorTask(void *pvParameters)
+static void callback_display(void *arg)
 {
-    while (1)
+    static int iter = 0;
+    char substring[2];
+    if (timer++ == 100)
     {
-        callback_sensor(NULL);
-
-
-        vTaskDelay(60000 / portTICK_PERIOD_MS); // 1 min
+        timer = 0;
+        iter++;
     }
-}
-
-void vSleepTask(void *pvParameters)
-{
-    while (1)
-    {
-        esp_deep_sleep(60000000); // 1 min
-    }
+    int str_len = strlen(forecastToDisplay);
+    iter %= str_len;
+    substring[0] = forecastToDisplay[iter];
+    substring[1] = forecastToDisplay[(iter + 1) % str_len];
+    displayStatus(substring);
 }
 
 void start_timers()
@@ -113,19 +159,15 @@ void start_timers()
         .name = "sensor"};
     esp_timer_handle_t periodic_timer_sensor;
 
+    const esp_timer_create_args_t periodic_timer_args_display = {
+        .callback = &callback_display,
+        .name = "display"};
+    esp_timer_handle_t periodic_timer_display;
+
     ESP_ERROR_CHECK(esp_timer_create(&periodic_timer_args_sensor, &periodic_timer_sensor));
+    ESP_ERROR_CHECK(esp_timer_create(&periodic_timer_args_display, &periodic_timer_display));
     ESP_ERROR_CHECK(esp_timer_start_periodic(periodic_timer_sensor, 60000000)); // 1 min
-}
-
-void start_tasks()
-{
-    TaskHandle_t xSensorHandle = NULL;
-    xTaskCreate(vSensorTask, "SensorTask", 512, NULL, 5, NULL);
-    configASSERT(xSensorHandle);
-
-    TaskHandle_t xSleepHandle = NULL;
-    xTaskCreate(vSleepTask, "SleepTask", 64, NULL, 3, NULL);
-    configASSERT(xSleepHandle);
+    ESP_ERROR_CHECK(esp_timer_start_periodic(periodic_timer_display, 10000)); // 10 ms
 }
 
 void app_main(void)
@@ -133,6 +175,10 @@ void app_main(void)
     wifi_init();
     wifi_start();
     mqtt_init();
+
+    configure_io_ports();
+
+    memcpy(forecastToDisplay, getWeatherState(-1), 7);
 
     // Configure the sensor
     CHECK(bme280_init(&busHandle, &sensorHandle, SENSOR_ADDR, SDA_PIN, SCL_PIN, CLK_SPEED_HZ));

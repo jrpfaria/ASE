@@ -11,6 +11,6 @@
 #define WINTER 0
 
 char* forecastLUT(int computedForecast);
-char* computeForecast(float temperature, float pressure, float altitude, int winds, int season);
+char* computeForecast(float temperature, float pressure, float altitude, int winds, int season, int* bin7seg);
 
 #endif // __FORECAST_H__INCLUDED__

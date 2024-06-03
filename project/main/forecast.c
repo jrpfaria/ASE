@@ -67,7 +67,7 @@ char* forecastLUT(int computedForecast)
     }
 }
 
-char* computeForecast(float temperature, float pressure, float altitude, int winds, int season)
+char* computeForecast(float temperature, float pressure, float altitude, int winds, int season, int* bin7seg)
 {
     static int firstIterationFlag = 1;
 
@@ -75,6 +75,7 @@ char* computeForecast(float temperature, float pressure, float altitude, int win
     {
         oldestPressure = (int)pressure;
         firstIterationFlag = 0;
+        *bin7seg = 0;
         return "Too early to forecast.";
     }
 
@@ -96,5 +97,7 @@ char* computeForecast(float temperature, float pressure, float altitude, int win
     Z = winds ? Z - 1 : Z + 1;
     // Z = season ? Z + 1 : Z - 1;
 
-    return forecastLUT((int)roundf(Z));
+    *bin7seg = (int)roundf(Z);
+
+    return forecastLUT(*bin7seg);
 }

@@ -335,7 +335,7 @@ esp_err_t bme280_read_calibration_data(i2c_master_dev_handle_t sensorHandle)
     calibData.dig_P8 = (rxBuf[21] << 8) | rxBuf[20];
     calibData.dig_P9 = (rxBuf[23] << 8) | rxBuf[22];
 
-    const uint8_t txBuf1[1] = {CALIB_26_REG};
+    const uint8_t txBuf1[1] = {CALIB_H1_REG};
     uint8_t rxBuf1[1];
 
     CHECK(i2c_master_transmit_receive(sensorHandle, txBuf1, sizeof(txBuf1), rxBuf1, sizeof(rxBuf1), -1));
