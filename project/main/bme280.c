@@ -361,7 +361,7 @@ int32_t t_fine;
 /**
  * \brief Temperature compensation for the BME280 sensor. 
  */
-uint32_t bme280_compensate_T_int32(int32_t adc_T)
+float bme280_compensate_T_int32(int32_t adc_T)
 {
     int32_t var1, var2;
 
@@ -370,13 +370,13 @@ uint32_t bme280_compensate_T_int32(int32_t adc_T)
 
     t_fine = var1 + var2;
 
-    return (t_fine * 5 + 128) >> 8;
+    return ((t_fine * 5 + 128) >> 8) / 100.0;
 }
 
 /**
  * \brief Pressure compensation for the BME280 sensor. 
  */
-uint32_t bme280_compensate_P_int32(int32_t adc_P)
+float bme280_compensate_P_int32(int32_t adc_P)
 {
     int64_t var1, var2, p;
 
@@ -399,13 +399,13 @@ uint32_t bme280_compensate_P_int32(int32_t adc_P)
 
     p = ((p + var1 + var2) >> 8) + (((int64_t)calibData.dig_P7) << 4);
 
-    return (uint32_t)p;
+    return ((uint32_t)p / 256.0 / 100.0);
 }
 
 /**
  * \brief Humidity compensation for the BME280 sensor.
  */
-uint32_t bme280_compensate_H_int32(int32_t adc_H)
+float bme280_compensate_H_int32(int32_t adc_H)
 {
     int32_t v_x1_u32r;
 
@@ -418,7 +418,7 @@ uint32_t bme280_compensate_H_int32(int32_t adc_H)
     v_x1_u32r = (v_x1_u32r < 0 ? 0 : v_x1_u32r);
     v_x1_u32r = (v_x1_u32r > 419430400 ? 419430400 : v_x1_u32r);
 
-    return (uint32_t)(v_x1_u32r >> 12);
+    return ((uint32_t)(v_x1_u32r >> 12) / 1024.0);
 }
 
 /**

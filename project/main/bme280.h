@@ -70,9 +70,9 @@ typedef struct {
  * \brief Data structure to hold BME280 sensor compensation data.  
  */
 typedef struct {
-    int32_t  temperature;   /**< Temperature in 0.01 degrees Celsius. 5421 = 54.21*C */
-    uint32_t pressure;      /**< Pressure in Pa. 24674867/256 = 96386.2 Pa = 963.862 hPa */
-    uint32_t humidity;      /**< Humidity in 0.01% relative humidity. 47445/1024 = 46.333 %RH */
+    float temperature;   /**< Temperature in 0.01 degrees Celsius. 5421 = 54.21*C */
+    float pressure;      /**< Pressure in Pa. 24674867/256 = 96386.2 Pa = 963.862 hPa */
+    float humidity;      /**< Humidity in 0.01% relative humidity. 47445/1024 = 46.333 %RH */
 } bme280_comp_data_t;
 
 /**
@@ -230,32 +230,17 @@ esp_err_t bme280_read_calibration_data(i2c_master_dev_handle_t sensorHandle);
 /**
  * \brief Temperature compensation for the BME280 sensor. 
  */
-double bme280_compensate_temperature(int32_t adc_T);
+float bme280_compensate_T_int32(int32_t adc_T);
 
 /**
  * \brief Pressure compensation for the BME280 sensor. 
  */
-double bme280_compensate_pressure(int32_t adc_P);
-
-/**
- * \brief Humidity compensation for the BME280 sensor. 
- */
-double bme280_compensate_humidity(int32_t adc_H);
-
-/**
- * \brief Temperature compensation for the BME280 sensor. 
- */
-uint32_t bme280_compensate_T_int32(int32_t adc_T);
-
-/**
- * \brief Pressure compensation for the BME280 sensor. 
- */
-uint32_t bme280_compensate_P_int32(int32_t adc_P);
+float bme280_compensate_P_int32(int32_t adc_P);
 
 /**
  * \brief Humidity compensation for the BME280 sensor.
  */
-uint32_t bme280_compensate_H_int32(int32_t adc_H);
+float bme280_compensate_H_int32(int32_t adc_H);
 
 /**
  * \brief Data compensation for the BME280 sensor.
