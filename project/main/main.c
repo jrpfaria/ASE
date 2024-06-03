@@ -108,7 +108,7 @@ static void callback_sensor(void *arg)
 {
     CHECK(bme280_set_mode(sensorHandle, MODE_FORCED));
 
-    if (sensorReadIteration++ == 1/*MINUTES_BETWEEN_FORECASTS*/)
+    if (sensorReadIteration++ == MINUTES_BETWEEN_FORECASTS)
     {
         forecastReady = 1;
         sensorReadIteration = 0;
