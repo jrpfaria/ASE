@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  labels:
+    app: influxdb
+  name: influxdb
+  namespace: ase-p1g4
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: influxdb
+  serviceName: "influxdb"
+  template:
+    metadata:
+      labels:
+        app: influxdb
+    spec:
+      containers:
+        - image: influxdb:2
+          name: influxdb
+          ports:
+            - containerPort: 8086
+              hostPort: 8086
+              protocol: TCP
+          volumeMounts:
+            - mountPath: /var/lib/influxdb2
+              name: influxdb-claim0
+            - mountPath: /etc/influxdb2
+              name: influxdb-claim1
+      restartPolicy: Always
+  volumeClaimTemplates:
+    - metadata:
+        name: influxdb-claim0
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 500Mi
+    - metadata:
+        name: influxdb-claim1
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 500Mi

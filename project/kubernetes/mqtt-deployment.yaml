@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mqtt
+  namespace: ase-p1g4
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mqtt
+  strategy: {}
+  template:
+    metadata:
+      labels:
+        app: mqtt
+    spec:
+      volumes:
+        - name: mqtt-conf
+          configMap:
+            name: mqtt-conf
+            defaultMode: 420
+      containers:
+        - image: eclipse-mosquitto
+          name: mqtt
+          ports:
+            - containerPort: 8000
+              protocol: TCP
+          volumeMounts:
+            - name: mqtt-conf
+              mountPath: /mosquitto/config/mosquitto.conf
+              subPath: mosquitto.conf
+          resources: {}
+      restartPolicy: Always
