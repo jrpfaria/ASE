@@ -1,0 +1,25 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: telegraf
+  namespace: ase-p1g4
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: telegraf
+  strategy: {}
+  template:
+    metadata:
+      labels:
+        app: telegraf
+    spec:
+      containers:
+        - args: ["telegraf", "--config", "http://ase-p1g4.k3s/api/v2/telegrafs/0d2368041a2a5000"]
+          env:
+          - name: INFLUX_TOKEN
+            value: FECAvRv_NIrn_w_AEfh2l8aRqDZoCiBA-h5WS2GEgwLlPD6yTa6e2kjTUuz23TF3KZRlayOvwmxdLvlAM4a2QA==
+          image: telegraf
+          name: telegraf
+          resources: {}
+      restartPolicy: Always
