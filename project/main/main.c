@@ -45,6 +45,8 @@
         gpio_set_direction(x, GPIO_MODE_OUTPUT);                \
     } while (0);
     
+#define setupDisplayOnStart() memcpy(forecastToDisplay, getWeatherState(-1), 7)
+
 // Global Variables
 i2c_master_bus_handle_t busHandle;      // I2C bus handle
 i2c_master_dev_handle_t sensorHandle;   // I2C device handle
@@ -108,7 +110,7 @@ static void callback_sensor(void *arg)
 {
     CHECK(bme280_set_mode(sensorHandle, MODE_FORCED));
 
-    if (sensorReadIteration++ == MINUTES_BETWEEN_FORECASTS)
+    if (sensorReadIteration++ == 1/*MINUTES_BETWEEN_FORECASTS*/)
     {
         forecastReady = 1;
         sensorReadIteration = 0;
@@ -178,7 +180,7 @@ void app_main(void)
 
     configure_io_ports();
 
-    memcpy(forecastToDisplay, getWeatherState(-1), 7);
+    setupDisplayOnStart();
 
     // Configure the sensor
     CHECK(bme280_init(&busHandle, &sensorHandle, SENSOR_ADDR, SDA_PIN, SCL_PIN, CLK_SPEED_HZ));
