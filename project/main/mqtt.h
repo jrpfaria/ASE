@@ -1,5 +1,7 @@
 #pragma once
 
+#include "ota.h"
+
 #define TEMP_TOPIC "temperature"
 #define PRESS_TOPIC "pressure"
 #define HUM_TOPIC "humidity"
