@@ -5,6 +5,7 @@
 #include "forecast/forecast.h"
 #include "bin7seg/bin7seg.h"
 #include "sntp/sntp.h"
+#include "spiffs/spiffs.h"
 #include <string.h>
 
 #define SPIFFS_FILE_PATH "/spiffs/data.txt"
@@ -41,7 +42,7 @@ i2c_master_dev_handle_t sensorHandle;   // I2C device handle
 bme280_comp_data_t sensorData;          // Sensor data
 char forecastData[40];                  // Forecast data
 char forecastToDisplay[7];              // Forecast to display
-
+FILE* f;                                // File pointer
 
 void print_data()
 {
@@ -59,12 +60,22 @@ void print_data()
 
 void fprint_data()
 {
-    FILE* f = fopen(SPIFFS_FILE_PATH, "a");
-    fprintf(f, "-----------%s-----------\n", getTimestamp());
-    fprintf(f, "Temperature: %8.2f\t *C\n", sensorData.temperature);
-    fprintf(f, "Pressure   : %8.2f\thPa\n", sensorData.pressure);
-    fprintf(f, "Humidity   : %8.2f\t%%RH\n", sensorData.humidity);
-    fprintf(f, "%40s\n", forecastData);
+    f = fopen(SPIFFS_FILE_PATH, "w");
+    if (f == NULL) {
+        ESP_LOGE("SPIFFS", "Failed to open file for writing");
+        return;
+    }
+
+    // print is done this way as spiffs is not real-time with the printf
+    // it is also done this way to reduce space usage
+    fprintf(f, "TS:%s\n\
+                T:%8.2f\t *C\n\
+                P:%8.2f\thPa\n\
+                H:%8.2f\t%%RH\n\
+                F:%s\n", 
+                getTimestamp(),
+                sensorData.temperature, sensorData.pressure, sensorData.humidity,
+                forecastData);
     fclose(f);
 }
 
@@ -75,6 +86,22 @@ void post_data()
     publish(PRESS_TOPIC, sensorData.pressure);
     publish(HUM_TOPIC, sensorData.humidity);
     mqtt_publish(FORECAST_TOPIC, forecastData);
+}
+
+void flush_data()
+{
+    static int iter = 0;
+
+    if (!mqtt_is_connected())
+        post_data();
+
+    else if (spiffsUsedSpace() < 90){
+        if (++iter == MINUTES_BETWEEN_STORING_DATA){
+            fprint_data();
+            iter = 0;
+            ESP_LOGI("MAIN", "SPIFFS USED %d", spiffsUsedSpace());
+        }
+    }
 }
 
 static void callback_sensor(void *arg)
@@ -109,10 +136,7 @@ static void callback_sensor(void *arg)
 
     print_data();
 
-    // if (mqtt_check_connection())
-    post_data();
-    // else
-    // fprint_data();
+    flush_data();
 }
 
 static void callback_display(void *arg)
@@ -155,6 +179,7 @@ void app_main(void)
     wifi_start();
     mqtt_init();
     time_init();
+    init_spiffs(f, SPIFFS_FILE_PATH);
 
     configure_io_ports();
 

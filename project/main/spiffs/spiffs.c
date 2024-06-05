@@ -1,13 +1,24 @@
 #include "spiffs.h"
 
-void init_spiffs(void)
+esp_vfs_spiffs_conf_t conf = {
+    .base_path = "/spiffs",
+    .partition_label = NULL,
+    .max_files = 1,
+    .format_if_mount_failed = true
+};
+
+int spiffsUsedSpace()
 {
-    esp_vfs_spiffs_conf_t conf = {
-      .base_path = "/spiffs",
-      .partition_label = NULL,
-      .max_files = 5,
-      .format_if_mount_failed = true
-    };
+    size_t total = 0, used = 0;
+    esp_err_t ret = esp_spiffs_info(conf.partition_label, &total, &used);
+    if (ret != ESP_OK) {
+        ESP_LOGE("SPIFFS", "Failed to get SPIFFS partition information (%s)", esp_err_to_name(ret));
+    }
+    return (used/total)*100;
+}
+
+void init_spiffs(FILE* f, char* file_path)
+{
     esp_err_t ret = esp_vfs_spiffs_register(&conf);
 
     if (ret != ESP_OK) {
