@@ -1,19 +1,16 @@
 #include "mqtt.h"
 
-#include <stdio.h>
-#include <stdint.h>
-#include <string.h>
-#include <stdlib.h>
-#include <inttypes.h>
-#include "esp_system.h"
-#include "nvs_flash.h"
-#include "esp_event.h"
-#include "esp_netif.h"
-
-#include "esp_log.h"
-#include "mqtt_client.h"
-
 static const char *TAG = "mqtt";
+
+static bool connected = false;
+
+bool mqtt_is_connected() {
+    return connected;
+}
+
+void set_connected(bool status) {
+    connected = status;
+}
 
 void log_error_if_nonzero(const char *message, int error_code)
 {
@@ -43,13 +40,13 @@ void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_t event
     {
     case MQTT_EVENT_CONNECTED:
         ESP_LOGI(TAG, "MQTT_EVENT_CONNECTED");
+        set_connected(true);
         msg_id = esp_mqtt_client_subscribe(client, "ota", 0);
-        ESP_LOGI(TAG, "sent subscribe successful, msg_id=%d", msg_id);
-        msg_id = esp_mqtt_client_subscribe(client, "test", 0);
         ESP_LOGI(TAG, "sent subscribe successful, msg_id=%d", msg_id);
         break;
     case MQTT_EVENT_DISCONNECTED:
         ESP_LOGI(TAG, "MQTT_EVENT_DISCONNECTED");
+        set_connected(false);
         break;
     case MQTT_EVENT_SUBSCRIBED:
         ESP_LOGI(TAG, "MQTT_EVENT_SUBSCRIBED, msg_id=%d", event->msg_id);
