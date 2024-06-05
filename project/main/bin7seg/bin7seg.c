@@ -28,7 +28,7 @@ int char2seg(char c)
     {
         case 'A': return 0b1110111;
         case 'C': return 0b0111001;
-        case 'D': return 0b1001111;
+        case 'D': return 0b1011110;
         case 'E': return 0b1111001;
         case 'G': return 0b1111101;
         case 'I': return 0b0110000;
