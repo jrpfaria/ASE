@@ -46,15 +46,18 @@ FILE* f;                                // File pointer
 
 void print_data()
 {
-    static int firstIterationFlag = 1;
-    if (firstIterationFlag--)
-        printf("\033[H\033[J"); // Clear the screen
+    printf("\033[H\033[J"); // Clear the screen
     printf("\033[1;1H"); // Move cursor to line 1, column 1   
-    printf("-----------%s-----------\n", getTimestamp());
-    printf("Temperature: %8.2f\t *C\n", sensorData.temperature);
-    printf("Pressure   : %8.2f\thPa\n", sensorData.pressure);
-    printf("Humidity   : %8.2f\t%%RH\n", sensorData.humidity);
-    printf("%40s\n", forecastData);
+    printf("+-----------------%s-----------------+\n\
+          \r| Temperature:%35.2f  *C |\n\
+          \r| Pressure   :%35.2f hPa |\n\
+          \r| Humidity   :%35.2f %%RH |\n\
+          \r| Forecast   :%39s |\n\
+          \r+-----------------------------------------------------+\n", 
+            getTimestamp(),
+            sensorData.temperature, sensorData.pressure, sensorData.humidity,
+            forecastData
+          );
     fflush(stdout);
 }
 
@@ -69,13 +72,14 @@ void fprint_data()
     // print is done this way as spiffs is not real-time with the printf
     // it is also done this way to reduce space usage
     fprintf(f, "TS:%s\n\
-                T:%8.2f\t *C\n\
-                P:%8.2f\thPa\n\
-                H:%8.2f\t%%RH\n\
-                F:%s\n", 
+              \rT:%8.2f\t *C\n\
+              \rP:%8.2f\thPa\n\
+              \rH:%8.2f\t%%RH\n\
+              \rF:%s\n", 
                 getTimestamp(),
                 sensorData.temperature, sensorData.pressure, sensorData.humidity,
-                forecastData);
+                forecastData
+           );
     fclose(f);
 }
 
@@ -92,7 +96,7 @@ void flush_data()
 {
     static int iter = 0;
 
-    if (!mqtt_is_connected())
+    if (mqtt_is_connected())
         post_data();
 
     else if (spiffsUsedSpace() < 90){
