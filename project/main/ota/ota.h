@@ -2,4 +2,4 @@
 
 #include "esp_err.h"
 
-void ota_update();
+void ota_update(char* url);

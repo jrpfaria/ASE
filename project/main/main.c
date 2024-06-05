@@ -1,24 +1,18 @@
-#include "bme280.h"
+#include "bme280/bme280.h"
 #include "esp_timer.h"
-#include "wifi.h"
-#include "mqtt.h"
-#include "forecast.h"
-#include "bin7seg.h"
+#include "wifi/wifi.h"
+#include "mqtt/mqtt.h"
+#include "forecast/forecast.h"
+#include "bin7seg/bin7seg.h"
+#include "sntp/sntp.h"
 #include <string.h>
+
+#define SPIFFS_FILE_PATH "/spiffs/data.txt"
 
 #define SENSOR_ADDR 0x77
 #define SDA_PIN 0
 #define SCL_PIN 1
 #define CLK_SPEED_HZ 400000
-
-#define A 2
-#define B 3
-#define C 8
-#define D 5
-#define E 4
-#define F 7
-#define G 6
-#define DISPLAY 10
 
 #define CHECK(x)                                                \
     do                                                          \
@@ -38,63 +32,40 @@
         mqtt_publish(topic, aux);                               \
     } while (0)
 
-#define configure_pin(x)                                        \
-    do                                                          \
-    {                                                           \
-        gpio_reset_pin(x);                                      \
-        gpio_set_direction(x, GPIO_MODE_OUTPUT);                \
-    } while (0);
-    
+
 #define setupDisplayOnStart() memcpy(forecastToDisplay, getWeatherState(-1), 7)
 
 // Global Variables
 i2c_master_bus_handle_t busHandle;      // I2C bus handle
 i2c_master_dev_handle_t sensorHandle;   // I2C device handle
 bme280_comp_data_t sensorData;          // Sensor data
-int sensorReadIteration = 0;            // Sensor read iteration
-int forecastReady = 1;                  // Flag to indicate if the forecast is ready to be computed
 char forecastData[40];                  // Forecast data
 char forecastToDisplay[7];              // Forecast to display
-int timer = 0;                          // Timer to control the display
 
-void configure_io_ports()
-{
-    configure_pin(A);
-    configure_pin(B);
-    configure_pin(C);
-    configure_pin(D);
-    configure_pin(E);
-    configure_pin(F);
-    configure_pin(G);
-    configure_pin(DISPLAY);
-}
-
-void displayStatus(char* status)
-{
-    static int active_display = 0;
-    char segment = char2seg(status[active_display]);
-    gpio_set_level(DISPLAY, active_display);
-    gpio_set_level(A, (segment & 0b0000001));
-    gpio_set_level(B, (segment & 0b0000010));
-    gpio_set_level(C, (segment & 0b0000100));
-    gpio_set_level(D, (segment & 0b0001000));
-    gpio_set_level(E, (segment & 0b0010000));
-    gpio_set_level(F, (segment & 0b0100000));
-    gpio_set_level(G, (segment & 0b1000000));
-    active_display = !active_display;
-}
 
 void print_data()
 {
     static int firstIterationFlag = 1;
     if (firstIterationFlag--)
         printf("\033[H\033[J"); // Clear the screen
-    printf("\033[1;1H"); // Move cursor to line 1, column 1    
+    printf("\033[1;1H"); // Move cursor to line 1, column 1   
+    printf("-----------%s-----------\n", getTimestamp());
     printf("Temperature: %8.2f\t *C\n", sensorData.temperature);
     printf("Pressure   : %8.2f\thPa\n", sensorData.pressure);
     printf("Humidity   : %8.2f\t%%RH\n", sensorData.humidity);
     printf("%40s\n", forecastData);
     fflush(stdout);
+}
+
+void fprint_data()
+{
+    FILE* f = fopen(SPIFFS_FILE_PATH, "a");
+    fprintf(f, "-----------%s-----------\n", getTimestamp());
+    fprintf(f, "Temperature: %8.2f\t *C\n", sensorData.temperature);
+    fprintf(f, "Pressure   : %8.2f\thPa\n", sensorData.pressure);
+    fprintf(f, "Humidity   : %8.2f\t%%RH\n", sensorData.humidity);
+    fprintf(f, "%40s\n", forecastData);
+    fclose(f);
 }
 
 void post_data()
@@ -108,9 +79,12 @@ void post_data()
 
 static void callback_sensor(void *arg)
 {
+    static int sensorReadIteration = 0; 
+    static int forecastReady = 1;   // Flag to indicate if the forecast is ready to be computed
+
     CHECK(bme280_set_mode(sensorHandle, MODE_FORCED));
 
-    if (sensorReadIteration++ == 1/*MINUTES_BETWEEN_FORECASTS*/)
+    if (sensorReadIteration++ == MINUTES_BETWEEN_FORECASTS)
     {
         forecastReady = 1;
         sensorReadIteration = 0;
@@ -135,12 +109,15 @@ static void callback_sensor(void *arg)
 
     print_data();
 
+    // if (mqtt_check_connection())
     post_data();
+    // else
+    // fprint_data();
 }
 
 static void callback_display(void *arg)
 {
-    static int iter = 0;
+    static int iter = 0, timer = 0;
     char substring[2];
     if (timer++ == 100)
     {
@@ -177,6 +154,7 @@ void app_main(void)
     wifi_init();
     wifi_start();
     mqtt_init();
+    time_init();
 
     configure_io_ports();
 

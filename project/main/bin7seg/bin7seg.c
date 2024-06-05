@@ -1,3 +1,5 @@
+#include "bin7seg.h"
+
 char* getWeatherState(int Z)
 {
     switch (Z)
@@ -41,4 +43,31 @@ int char2seg(char c)
     
         default: return 0;
     }
+}
+
+void configure_io_ports()
+{
+    configure_pin(A);
+    configure_pin(B);
+    configure_pin(C);
+    configure_pin(D);
+    configure_pin(E);
+    configure_pin(F);
+    configure_pin(G);
+    configure_pin(DISPLAY);
+}
+
+void displayStatus(char* status)
+{
+    static int active_display = 0;
+    char segment = char2seg(status[active_display]);
+    gpio_set_level(DISPLAY, active_display);
+    gpio_set_level(A, (segment & 0b0000001));
+    gpio_set_level(B, (segment & 0b0000010));
+    gpio_set_level(C, (segment & 0b0000100));
+    gpio_set_level(D, (segment & 0b0001000));
+    gpio_set_level(E, (segment & 0b0010000));
+    gpio_set_level(F, (segment & 0b0100000));
+    gpio_set_level(G, (segment & 0b1000000));
+    active_display = !active_display;
 }

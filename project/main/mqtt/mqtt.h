@@ -1,6 +1,6 @@
 #pragma once
 
-#include "ota.h"
+#include "../ota/ota.h"
 
 #define TEMP_TOPIC "temperature"
 #define PRESS_TOPIC "pressure"
